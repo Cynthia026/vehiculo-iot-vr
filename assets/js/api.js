@@ -1,6 +1,6 @@
 // assets/js/api.js
-import { CONFIG } from './config.js?v=12';
-import { ui } from './ui.js?v=13';
+import { CONFIG } from './config.js?v=15';
+import { ui } from './ui.js?v=15';
 
 class ApiClient {
     constructor() {

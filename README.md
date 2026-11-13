@@ -15,6 +15,7 @@ Aplicación web para **controlar y monitorear en tiempo real una excavadora IoT*
 - **Botón Detener** para paro inmediato. Esta orden no puede ser cancelada por un movimiento que se envíe después.
 - **Accesorios** (arriba): Velocidad, Sonido y Luz. Se cargan desde el catálogo de comandos de la API.
 - **Secuencias demo** (abajo): ejecutar y cancelar rutinas automáticas.
+- **Botones con relieve 3D**: tienen sombra y canto inferior, y se hunden al presionarlos.
 - **Atajos de teclado** en escritorio:
 
   | Tecla | Acción |
@@ -32,6 +33,18 @@ Aplicación web para **controlar y monitorear en tiempo real una excavadora IoT*
 - Tabla con los **últimos 10 movimientos**, que se actualiza en tiempo real por WebSocket.
 - Indicadores de estado de **WSS**, **AWS (API REST)** y **RDS (base de datos)**.
 
+### Consola de botones 3D
+- Frente a la excavadora hay una **consola física en 3D** con los mismos controles: cruz de Brazo y motores, cruz de Movimiento, tres botones de accesorios y un botón rojo **STOP**.
+- Se usa con el mouse o con el dedo. Los botones se hunden y se iluminan al presionarlos, y la Luz y la Velocidad se quedan encendidas mientras estén activas.
+- La consola también refleja lo que haces con los botones de la página, el teclado o las demos.
+- Al arrastrar fuera de la consola, la cámara sigue rotando como siempre.
+
+### Modo simulación
+- Si AWS no responde, aparece el indicador **Modo simulación** y **todos los botones siguen funcionando**: mueven el gemelo 3D, pero no se envía nada al vehículo real.
+- Monitoreo muestra un historial local con los últimos 10 movimientos simulados.
+- Incluye tres demos locales: *Recorrido cuadrado*, *Excavación* y *Exhibición*.
+- En cuanto AWS responde, la app cambia sola al control real.
+
 ### Gemelo digital 3D
 - Escena espacial con plataforma iluminada y un modelo articulado de la excavadora: orugas, torreta giratoria, brazo hidráulico, faros y onda de sonido.
 - El modelo **reacciona a los comandos** que se envían y a los eventos en vivo del WebSocket, incluidas las demos.
@@ -45,7 +58,7 @@ Aplicación web para **controlar y monitorear en tiempo real una excavadora IoT*
 - Al salir de VR el vehículo se detiene automáticamente.
 
 ### Robustez
-- **Modo sin conexión**: la interfaz se muestra de inmediato y reintenta conectar con AWS cada 8 s.
+- **Modo simulación**: la interfaz funciona de inmediato y reintenta conectar con AWS cada 8 s.
 - **Reconexión automática del WebSocket**: cada 3 s los primeros 5 intentos y después cada 15 s.
 - Si el navegador no soporta WebGL o el CDN de Three.js no responde, **los controles siguen funcionando** sin la parte 3D.
 - Diseño adaptable: escritorio, laptop, tableta y celular en vertical u horizontal.
@@ -81,6 +94,7 @@ vehiculo-iot-vr/
 │   │   ├── app.js             # Orquestador: eventos, botones, teclado, WSS y 3D/VR
 │   │   ├── ui.js              # Renderizado de la interfaz, sonidos y estados
 │   │   ├── scene3d.js         # Escena Three.js y gemelo digital de la excavadora
+│   │   ├── botones3d.js       # Consola de botones 3D dentro de la escena
 │   │   ├── vr-controls.js     # Sesión WebXR, mandos y paneles flotantes
 │   │   └── joystick.js        # (Versión anterior, ya no se usa)
 │   ├── data/

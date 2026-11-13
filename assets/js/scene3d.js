@@ -17,8 +17,9 @@ export class Scene3DManager {
             0.1,
             150
         );
-        this.defaultCamPos = new THREE.Vector3(2.9, 2.35, 3.4);
-        this.defaultTarget = new THREE.Vector3(0, 0.55, -0.3);
+        // Cámara elevada para ver la excavadora y, delante, la consola de botones 3D
+        this.defaultCamPos = new THREE.Vector3(3.3, 3.7, 4.5);
+        this.defaultTarget = new THREE.Vector3(0.35, 0.3, 0.25);
         this.camera.position.copy(this._camPosParaPantalla());
 
         this.renderer = new THREE.WebGLRenderer({
@@ -59,6 +60,7 @@ export class Scene3DManager {
         this.clock = new THREE.Clock();
         this.wheels = [];
         this.vrHooks = [];
+        this.obstaculos = []; // Zonas que el vehículo no puede atravesar ({ x, z, r })
 
         this._initLights();
         this._initSpaceEnvironment();
@@ -367,7 +369,8 @@ export class Scene3DManager {
                     this.motionState.drive * dt * 1.35 * speedMult
                 );
                 const distFromCenter = Math.hypot(nextPos.x, nextPos.z + 0.4);
-                if (distFromCenter < 3.1) {
+                const choca = this.obstaculos.some((o) => Math.hypot(nextPos.x - o.x, nextPos.z - o.z) < o.r);
+                if (distFromCenter < 3.1 && !choca) {
                     this.vehicleGroup.position.copy(nextPos);
                 }
             }

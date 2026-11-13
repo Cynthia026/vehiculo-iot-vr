@@ -26,7 +26,7 @@ const etiqueta = (nombre) => {
     return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-// Accesorios que se muestran (deshabilitados) mientras AWS no responde
+// Accesorios que se muestran (modo simulación) mientras AWS no responde
 const ACCESORIOS_BASE = ['Velocidad', 'Sonido', 'Luz'];
 
 class UIController {
@@ -42,13 +42,15 @@ class UIController {
         this.onSwitchToMonitoreo = null;
         this.scene3d = null;
         this.vrManager = null;
+        this.consola3d = null;
 
         this.initSplashScreen();
     }
 
-    attach3DAndVR(scene3d, vrManager) {
+    attach3DAndVR(scene3d, vrManager, consola3d = null) {
         this.scene3d = scene3d;
         this.vrManager = vrManager;
+        this.consola3d = consola3d;
     }
 
     // --- PANTALLA DE BIENVENIDA / CARGA INICIAL (SPLASH SCREEN) ---
@@ -336,6 +338,7 @@ class UIController {
             if (btn) btn.classList.add('is-active');
         }
         this.scene3d?.applyCommand(normCmd);
+        this.consola3d?.setActive(normCmd);
         this.vrManager?.syncState({ activeCmd: normCmd });
     }
 
@@ -343,6 +346,7 @@ class UIController {
         document.querySelectorAll('.dir-btn.demo-active').forEach((b) => b.classList.remove('demo-active'));
         document.querySelectorAll('.cmd-btn.sent').forEach((b) => b.classList.remove('sent'));
         this.scene3d?.applyCommand('DETENER');
+        this.consola3d?.setActive(null);
         this.vrManager?.syncState({ activeCmd: null });
     }
 
@@ -361,6 +365,7 @@ class UIController {
             'DERECHA': 'GIRAR_DERECHA'
         };
         const targetCmd = alias[norm] || norm;
+        this.consola3d?.setActive(targetCmd);
 
         const dirBtn = document.querySelector(`.dir-btn[data-cmd="${targetCmd}"]`);
         if (dirBtn) {
@@ -391,59 +396,60 @@ class UIController {
         comandos.forEach((cmd) => {
             const nombreCmd = cmd.nombre || cmd.comando;
             if (nombreCmd && !excluidos.includes(normalizar(nombreCmd))) {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'cmd-btn';
-                btn.innerHTML = `<span class="cmd-ico"><i class="bi bi-${iconoPara(nombreCmd)}"></i></span><span>${esc(etiqueta(nombreCmd))}</span>`;
-                btn.onclick = () => {
-                    this.vibrar();
-                    const norm = normalizar(nombreCmd);
-                    if (/SONIDO|CLAXON|BOCINA|AUDIO/.test(norm)) this.playSound('horn');
-                    else if (/VELOC|ACELER|TURBO|RAPID/.test(norm)) this.playSound('speed');
-                    else if (/LUZ|LUCES/.test(norm)) this.playSound('light');
-                    else this.playSound('tap');
-                    btn.classList.add('sent');
-                    setTimeout(() => btn.classList.remove('sent'), 250);
-                    onCommandClick(cmd.id_comando, nombreCmd);
-                };
-                container.appendChild(btn);
+                container.appendChild(this._crearBotonAccesorio(nombreCmd, () => onCommandClick(cmd.id_comando, nombreCmd)));
             }
         });
     }
 
-    renderComandosPlaceholder() {
+    // Accesorios de respaldo (modo simulación): funcionan aunque AWS no responda
+    renderComandosPlaceholder(onCommandClick) {
         const container = document.getElementById('extra-commands-container');
         container.innerHTML = '';
         ACCESORIOS_BASE.forEach((nombre) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'cmd-btn';
-            btn.disabled = true;
-            btn.innerHTML = `<span class="cmd-ico"><i class="bi bi-${iconoPara(nombre)}"></i></span><span>${nombre}</span>`;
-            container.appendChild(btn);
+            container.appendChild(this._crearBotonAccesorio(nombre, () => onCommandClick?.(null, nombre)));
         });
     }
 
+    // Sonido de cada accesorio (también lo usan la consola 3D y el modo VR)
+    sonidoAccesorio(nombre) {
+        const norm = normalizar(nombre);
+        if (/SONIDO|CLAXON|BOCINA|AUDIO/.test(norm)) this.playSound('horn');
+        else if (/VELOC|ACELER|TURBO|RAPID/.test(norm)) this.playSound('speed');
+        else if (/LUZ|LUCES/.test(norm)) this.playSound('light');
+        else this.playSound('tap');
+    }
+
+    _crearBotonAccesorio(nombreCmd, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cmd-btn';
+        btn.innerHTML = `<span class="cmd-ico"><i class="bi bi-${iconoPara(nombreCmd)}"></i></span><span>${esc(etiqueta(nombreCmd))}</span>`;
+        btn.onclick = () => {
+            this.vibrar();
+            this.sonidoAccesorio(nombreCmd);
+            btn.classList.add('sent');
+            setTimeout(() => btn.classList.remove('sent'), 250);
+            onClick();
+        };
+        return btn;
+    }
+
+    // Sin conexión con AWS: los botones siguen activos en MODO SIMULACIÓN (solo mueven el gemelo 3D)
     setOffline(off) {
         document.body.classList.toggle('is-offline', off);
+        document.getElementById('sim-chip')?.classList.toggle('d-none', !off);
         const stop = document.getElementById('btn-stop');
-        if (stop) stop.disabled = off;
+        if (stop) stop.disabled = false;
         document.querySelectorAll('.dir-btn').forEach((btn) => {
-            btn.disabled = off;
+            btn.disabled = false;
         });
-
-        if (off) {
-            const select = document.getElementById('demo-select');
-            select.innerHTML = '<option value="">Demos no disponibles</option>';
-            select.disabled = true;
-            document.getElementById('btn-demo-start').disabled = true;
-            document.getElementById('btn-demo-cancel').disabled = true;
-        }
+        this.vrManager?.syncState({ simulacion: off });
     }
 
     renderDemos(demos) {
         const select = document.getElementById('demo-select');
         select.innerHTML = '<option value="">Selecciona una DEMO</option>';
+        if (!demos.length) select.innerHTML = '<option value="">Sin demos registradas</option>';
         demos.forEach((demo) => {
             const option = document.createElement('option');
             option.value = demo.id_demo;

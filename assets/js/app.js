@@ -1,8 +1,8 @@
 // assets/js/app.js
-import { api } from './api.js?v=13';
-import { wsManager } from './websocket.js?v=13';
-import { ui, normalizar } from './ui.js?v=13';
-import { CONFIG } from './config.js?v=12';
+import { api } from './api.js?v=15';
+import { wsManager } from './websocket.js?v=15';
+import { ui, normalizar } from './ui.js?v=15';
+import { CONFIG } from './config.js?v=15';
 
 let catalogoComandos = [];
 let idComandoDetener = null;
@@ -11,6 +11,42 @@ let comandoActivoActual = null; // Evita envíos duplicados mientras se mantiene
 
 let reintentoTimer = null;
 let primerFallo = true;
+
+// --- MODO SIMULACIÓN ---
+// Mientras AWS no responde, todos los botones siguen funcionando: mueven el gemelo 3D,
+// registran un historial local en Monitoreo y ejecutan demos locales. No se envía nada al vehículo real.
+let modoSimulacion = true;
+const historialSim = [];
+let demoSimTimers = [];
+
+const DEMOS_SIM = [
+    {
+        id_demo: 'sim-recorrido',
+        nombre: 'Recorrido cuadrado (simulación)',
+        pasos: [
+            ['AVANZAR', 1400], ['GIRAR_DERECHA', 1000],
+            ['AVANZAR', 1400], ['GIRAR_DERECHA', 1000],
+            ['AVANZAR', 1400], ['GIRAR_DERECHA', 1000],
+            ['AVANZAR', 1400], ['GIRAR_DERECHA', 1000]
+        ]
+    },
+    {
+        id_demo: 'sim-excavacion',
+        nombre: 'Excavación (simulación)',
+        pasos: [
+            ['LUZ', 400], ['BAJAR_BRAZO', 1100], ['MOTOR_IZQUIERDA', 1100],
+            ['SUBIR_BRAZO', 1100], ['MOTOR_DERECHA', 1100], ['BAJAR_BRAZO', 700], ['LUZ', 400]
+        ]
+    },
+    {
+        id_demo: 'sim-exhibicion',
+        nombre: 'Exhibición (simulación)',
+        pasos: [
+            ['SONIDO', 700], ['VELOCIDAD', 400], ['GIRAR_IZQUIERDA', 2400],
+            ['AVANZAR', 1100], ['RETROCEDER', 1100], ['VELOCIDAD', 400], ['SONIDO', 700]
+        ]
+    }
+];
 
 // Mapa de respaldo por ID de comando en caso de que aún no esté en catálogo
 const MAPA_COMANDOS_ID = {
@@ -28,50 +64,48 @@ const MAPA_COMANDOS_ID = {
     12: 'Detener'
 };
 
+const MOVIMIENTOS = new Set([
+    'AVANZAR', 'RETROCEDER', 'GIRAR_IZQUIERDA', 'GIRAR_DERECHA',
+    'SUBIR_BRAZO', 'BAJAR_BRAZO', 'MOTOR_IZQUIERDA', 'MOTOR_DERECHA'
+]);
+
+// "GIRAR_IZQUIERDA" -> "Girar izquierda"
+const etiquetaCmd = (n) => {
+    const t = String(n || '').replace(/_/g, ' ').toLowerCase();
+    return t.charAt(0).toUpperCase() + t.slice(1);
+};
+
 async function inicializar() {
     try {
-        // 1. Inicializar escenario 3D Three.js + WebXR (opcional: si falla, el control sigue funcionando)
+        // 1. Escenario 3D, consola de botones 3D y modo VR (opcional: si falla, el control sigue funcionando)
         let scene3d = null;
         let vrManager = null;
+        let consola3d = null;
         try {
-            const { Scene3DManager } = await import('./scene3d.js?v=14');
-            const { VRManager } = await import('./vr-controls.js?v=13');
+            const { Scene3DManager } = await import('./scene3d.js?v=15');
+            const { VRManager } = await import('./vr-controls.js?v=15');
+            const { Consola3D } = await import('./botones3d.js?v=15');
             scene3d = new Scene3DManager('three-canvas');
+
+            const callbacksBotones = {
+                // Movimiento: mientras se mantiene presionado; accesorios: un solo envío
+                onPress: (normCmd, instantaneo = false) => {
+                    if (instantaneo) accionAccesorio(normCmd);
+                    else presionarBotonDireccion(normCmd);
+                },
+                onRelease: () => soltarBotonDireccion(),
+                onStop: () => pararTodo()
+            };
+
+            consola3d = new Consola3D(scene3d, callbacksBotones);
+
             vrManager = new VRManager(scene3d, {
-            onPressCommand: (normCmd, isInstant = false) => {
-                if (isInstant) {
-                    // Accesorios: un solo envío, sin parada al soltar
-                    ejecutarPorNombreNormalizado(normCmd);
-                } else {
-                    // Movimiento: igual que los botones web, para que al soltar el gatillo se envíe DETENER
-                    presionarBotonDireccion(normCmd);
-                }
-            },
-            onReleaseCommand: () => {
-                soltarBotonDireccion();
-            },
-            onStop: () => {
-                ui.limpiarResaltadoDemo();
-                ui.playSound('stop');
-                detenerVehiculo();
-            },
-            onStartDemo: async (idDemo) => {
-                try {
-                    ui.playSound('start');
-                    await api.ejecutarDemo(idDemo);
-                } catch {
-                    ui.showFeedback('No se pudo iniciar la DEMO', 'danger');
-                }
-            },
-            onCancelDemo: async () => {
-                try {
-                    ui.playSound('cancel');
-                    await api.cancelarDemo();
-                } catch {
-                    ui.showFeedback('No se pudo cancelar la DEMO', 'danger');
-                }
-            },
-            onFeedback: (msg, type, duration) => ui.showFeedback(msg, type, duration)
+                onPressCommand: (normCmd, isInstant = false) => callbacksBotones.onPress(normCmd, isInstant),
+                onReleaseCommand: callbacksBotones.onRelease,
+                onStop: callbacksBotones.onStop,
+                onStartDemo: (idDemo) => iniciarDemo(idDemo),
+                onCancelDemo: () => cancelarDemo(),
+                onFeedback: (msg, type, duration) => ui.showFeedback(msg, type, duration)
             });
         } catch (err3d) {
             console.error('Escenario 3D/VR no disponible:', err3d);
@@ -79,11 +113,10 @@ async function inicializar() {
             document.getElementById('btn-reset-cam')?.setAttribute('disabled', '');
         }
 
-        ui.attach3DAndVR(scene3d, vrManager);
+        ui.attach3DAndVR(scene3d, vrManager, consola3d);
 
-        // 2. Mostrar interfaz de inmediato (modo offline hasta que AWS responda) y configurar controles
-        ui.renderComandosPlaceholder();
-        ui.setOffline(true);
+        // 2. Mostrar la interfaz de inmediato en MODO SIMULACIÓN hasta que AWS responda
+        activarSimulacion();
         configurarControles(scene3d);
 
         // 3. Conectar WSS y enlazar la escucha de mensajes
@@ -152,8 +185,7 @@ function configurarControles(scene3d) {
         if (e.target.closest?.('select, input, textarea')) return;
         if (e.code === 'Space') {
             e.preventDefault();
-            ui.playSound('stop');
-            detenerVehiculo();
+            pararTodo();
             return;
         }
         const cmd = mapaTeclas[e.code];
@@ -168,46 +200,17 @@ function configurarControles(scene3d) {
     });
 
     // Botón Detener
-    document.getElementById('btn-stop').addEventListener('click', () => {
-        ui.limpiarResaltadoDemo();
-        ui.playSound('stop');
-        ui.vibrar(25);
-        detenerVehiculo();
-    });
+    document.getElementById('btn-stop').addEventListener('click', () => pararTodo());
 
     document.getElementById('demo-select').addEventListener('change', () => {
         ui.playSound('tap');
     });
 
-    document.getElementById('btn-demo-start').addEventListener('click', async () => {
-        const select = document.getElementById('demo-select');
-        if (!select.value) {
-            ui.playSound('cancel');
-            return;
-        }
-        try {
-            ui.limpiarResaltadoDemo();
-            ui.playSound('start');
-            ui.vibrar(15);
-            ui.showFeedback('Iniciando DEMO...', 'success');
-            await api.ejecutarDemo(select.value);
-        } catch {
-            ui.limpiarResaltadoDemo();
-            ui.showFeedback('No se pudo iniciar la DEMO', 'danger');
-        }
+    document.getElementById('btn-demo-start').addEventListener('click', () => {
+        iniciarDemo(document.getElementById('demo-select').value);
     });
 
-    document.getElementById('btn-demo-cancel').addEventListener('click', async () => {
-        ui.limpiarResaltadoDemo();
-        try {
-            ui.playSound('cancel');
-            ui.vibrar(15);
-            ui.showFeedback('Cancelando DEMO...', 'warning');
-            await api.cancelarDemo();
-        } catch {
-            ui.showFeedback('No se pudo cancelar la DEMO', 'danger');
-        }
-    });
+    document.getElementById('btn-demo-cancel').addEventListener('click', () => cancelarDemo());
 
     // Pestañas SPA (Control / Monitoreo)
     document.getElementById('btn-tab-control').addEventListener('click', () => {
@@ -220,6 +223,15 @@ function configurarControles(scene3d) {
         ui.switchView('monitoreo');
         cargarDatosMonitoreo();
     });
+}
+
+// Paro inmediato (botón Detener, barra espaciadora, botón rojo 3D y grip en VR)
+function pararTodo() {
+    cancelarDemoSimulada(false);
+    ui.limpiarResaltadoDemo();
+    ui.playSound('stop');
+    ui.vibrar(25);
+    detenerVehiculo();
 }
 
 function presionarBotonDireccion(cmdNorm) {
@@ -239,6 +251,13 @@ function soltarBotonDireccion() {
     detenerVehiculo();
 }
 
+// Accesorio (Velocidad, Sonido, Luz) desde la consola 3D o el modo VR
+function accionAccesorio(normCmd) {
+    ui.sonidoAccesorio(normCmd);
+    ui.vibrar(12);
+    ejecutarPorNombreNormalizado(normCmd);
+}
+
 function ejecutarPorNombreNormalizado(normCmd) {
     const comando = catalogoComandos.find(
         (c) => normalizar(c.nombre || c.comando || '') === normCmd
@@ -250,7 +269,117 @@ function ejecutarPorNombreNormalizado(normCmd) {
         const entry = Object.entries(MAPA_COMANDOS_ID).find(([, v]) => normalizar(v) === normCmd);
         if (entry) {
             ejecutarComando(Number(entry[0]), entry[1]);
+        } else if (modoSimulacion) {
+            ejecutarComando(null, normCmd);
         }
+    }
+}
+
+// --- MODO SIMULACIÓN ---------------------------------------------------------
+
+function activarSimulacion() {
+    modoSimulacion = true;
+    ui.setOffline(true);
+    ui.renderComandosPlaceholder((id, nombre) => ejecutarPorNombreNormalizado(normalizar(nombre)));
+    ui.renderDemos(DEMOS_SIM);
+    ui.renderHistorial(historialSim);
+}
+
+function registrarSim(nombre) {
+    const registro = { comando: nombre, fecha_hora: new Date().toISOString() };
+    historialSim.unshift(registro);
+    historialSim.length = Math.min(historialSim.length, 10);
+    ui.renderUltimoEstado(registro);
+    ui.renderHistorial(historialSim);
+}
+
+function simularComando(nombreComando) {
+    const norm = normalizar(nombreComando);
+    // Los movimientos ya se aplicaron al presionar; los accesorios se aplican aquí (una sola vez)
+    if (!MOVIMIENTOS.has(norm)) ui.scene3d?.applyCommand(norm);
+    registrarSim(etiquetaCmd(norm));
+    ui.showFeedback(`Simulación: ${etiquetaCmd(norm)}`, 'info', 1500);
+}
+
+function iniciarDemoSimulada(idDemo) {
+    cancelarDemoSimulada(false);
+    const demo = DEMOS_SIM.find((d) => d.id_demo === idDemo);
+    if (!demo) return;
+
+    ui.showFeedback(`Simulación: ${demo.nombre}`, 'success', 2500);
+    registrarSim(`Inicio DEMO: ${demo.nombre}`);
+
+    let t = 0;
+    demo.pasos.forEach(([cmd, ms]) => {
+        demoSimTimers.push(setTimeout(() => {
+            if (MOVIMIENTOS.has(cmd)) ui.playSound('joy');
+            else ui.sonidoAccesorio(cmd);
+            ui.resaltarMovimientoDemo(cmd);
+            registrarSim(`${etiquetaCmd(cmd)} (DEMO)`);
+        }, t));
+        t += ms;
+    });
+
+    demoSimTimers.push(setTimeout(() => {
+        demoSimTimers = [];
+        ui.limpiarResaltadoDemo();
+        ui.playSound('stop');
+        registrarSim('Detener (DEMO)');
+        ui.showFeedback('DEMO finalizada', 'info', 2000);
+    }, t));
+}
+
+function cancelarDemoSimulada(avisar = true) {
+    const habiaDemo = demoSimTimers.length > 0;
+    demoSimTimers.forEach(clearTimeout);
+    demoSimTimers = [];
+    if (habiaDemo) {
+        ui.limpiarResaltadoDemo();
+        registrarSim('DEMO CANCELADA');
+        if (avisar) ui.showFeedback('DEMO cancelada', 'warning', 2000);
+    }
+}
+
+// --- DEMOS (reales o simuladas) ---------------------------------------------
+
+async function iniciarDemo(idDemo) {
+    if (!idDemo) {
+        ui.playSound('cancel');
+        ui.showFeedback('Selecciona una DEMO', 'warning', 1800);
+        return;
+    }
+    ui.limpiarResaltadoDemo();
+    ui.playSound('start');
+    ui.vibrar(15);
+
+    if (modoSimulacion) {
+        iniciarDemoSimulada(idDemo);
+        return;
+    }
+    try {
+        ui.showFeedback('Iniciando DEMO...', 'success');
+        await api.ejecutarDemo(idDemo);
+    } catch {
+        ui.limpiarResaltadoDemo();
+        ui.showFeedback('No se pudo iniciar la DEMO', 'danger');
+    }
+}
+
+async function cancelarDemo() {
+    ui.limpiarResaltadoDemo();
+    ui.playSound('cancel');
+    ui.vibrar(15);
+
+    if (modoSimulacion) {
+        if (demoSimTimers.length) cancelarDemoSimulada(true);
+        else ui.showFeedback('No hay una DEMO en curso', 'info', 1800);
+        return;
+    }
+    try {
+        ui.showFeedback('Cancelando DEMO...', 'warning');
+        await api.cancelarDemo();
+    } catch {
+        ui.showFeedback('No se pudo cancelar la DEMO', 'danger');
     }
 }
 
@@ -265,12 +394,15 @@ async function cargarCatalogos() {
         const cmdDetener = catalogoComandos.find((c) => normalizar(c.nombre) === 'DETENER');
         if (cmdDetener) idComandoDetener = cmdDetener.id_comando;
 
+        // AWS respondió: se sale del modo simulación
+        cancelarDemoSimulada(false);
+        modoSimulacion = false;
         ui.renderComandos(catalogoComandos, ejecutarComando);
         ui.renderDemos(demos);
         ui.setOffline(false);
 
+        if (!primerFallo) ui.showFeedback('Conectado con AWS · control real activo', 'success', 2500);
         primerFallo = true;
-        document.getElementById('action-feedback').classList.add('d-none');
 
         // Si RDS no se pudo verificar al inicio (AWS aún no respondía), volver a consultarlo
         if (!document.getElementById('status-rds')?.classList.contains('bg-success')) {
@@ -278,8 +410,9 @@ async function cargarCatalogos() {
         }
     } catch (error) {
         console.error('Error cargando catálogos:', error);
+        catalogoComandos = [];
         if (primerFallo) {
-            ui.showFeedback('Sin conexión con AWS. Reintentando...', 'danger');
+            ui.showFeedback('Sin conexión con AWS · Modo simulación activo', 'warning', 4000);
             primerFallo = false;
         }
         reintentoTimer = setTimeout(cargarCatalogos, 8000);
@@ -289,6 +422,11 @@ async function cargarCatalogos() {
 // --- LÓGICA DE MONITOREO (REST + WSS) ---
 
 async function cargarDatosMonitoreo() {
+    if (modoSimulacion) {
+        if (historialSim.length) ui.renderUltimoEstado(historialSim[0]);
+        ui.renderHistorial(historialSim);
+        return;
+    }
     try {
         const [ultimoEstado, historial] = await Promise.all([
             api.obtenerUltimoEstado(),
@@ -400,6 +538,10 @@ async function verificarRDS() {
 }
 
 async function ejecutarComando(idComando, nombreComando) {
+    if (modoSimulacion) {
+        simularComando(nombreComando);
+        return;
+    }
     try {
         ui.showFeedback(`Enviando: ${nombreComando}`);
         await api.ejecutarMovimiento(idComando);
@@ -412,6 +554,12 @@ async function detenerVehiculo() {
     comandoActivoActual = null;
     ui.setActiveDirectionalButton(null);
     ui.scene3d?.applyCommand('DETENER');
+
+    if (modoSimulacion) {
+        registrarSim('Detener');
+        return;
+    }
+
     const stopId = idComandoDetener || 12;
     ui.showFeedback('Enviando: Detener');
     try {

@@ -996,3 +996,145 @@ button:focus-visible, select:focus-visible {
     .cmd-btn { min-height: 40px; height: auto; flex-direction: row; }
     .demo-row { grid-template-columns: minmax(0, 1fr) 190px; gap: .35rem; }
 }
+
+
+/* =====================================================================
+   BOTONES 3D (relieve con canto inferior; se hunden al presionarlos)
+   ===================================================================== */
+.dir-btn,
+.cmd-btn,
+.btn-stop,
+.btn-demo {
+    --canto: 6px;
+    position: relative;
+    transform: translateY(0);
+    transition: transform .07s ease, box-shadow .07s ease, background .12s ease, border-color .12s ease, filter .12s ease;
+}
+
+/* Direccionales */
+.dir-btn {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, 0) 45%),
+        linear-gradient(180deg, rgba(var(--btn-rgb), .26), rgba(var(--btn-rgb), .08)),
+        #1a2646;
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, .16),
+        inset 0 -3px 0 rgba(0, 0, 0, .25),
+        0 var(--canto) 0 0 rgba(var(--btn-rgb), .38),
+        0 var(--canto) 0 0 #0a1020,
+        0 calc(var(--canto) + 8px) 16px rgba(0, 0, 0, .5);
+}
+.dir-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0) 45%),
+        linear-gradient(180deg, rgba(var(--btn-rgb), .34), rgba(var(--btn-rgb), .12)),
+        #1d2a4e;
+}
+.dir-btn:active:not(:disabled),
+.dir-btn.is-active,
+.dir-btn.demo-active {
+    transform: translateY(calc(var(--canto) - 1px));
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, 0) 50%),
+        linear-gradient(145deg, rgb(var(--btn-rgb)), rgba(var(--btn-rgb), .78));
+    border-color: rgba(255, 255, 255, .9);
+    box-shadow:
+        inset 0 2px 6px rgba(0, 0, 0, .25),
+        0 1px 0 0 rgba(var(--btn-rgb), .6),
+        0 1px 0 0 #0a1020,
+        0 0 22px rgba(var(--btn-rgb), .6);
+}
+
+/* Centro de la cruz: hundido en el panel */
+.dpad-center {
+    box-shadow: inset 0 4px 10px rgba(0, 0, 0, .55), inset 0 -1px 0 rgba(255, 255, 255, .06);
+}
+
+/* Accesorios */
+.cmd-btn {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, 0) 40%),
+        linear-gradient(180deg, rgba(var(--c), .2), rgba(var(--c), .05) 65%),
+        #18233f;
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, .13),
+        inset 0 -3px 0 rgba(0, 0, 0, .22),
+        0 var(--canto) 0 0 rgba(var(--c), .34),
+        0 var(--canto) 0 0 #0a1020,
+        0 calc(var(--canto) + 8px) 16px rgba(0, 0, 0, .45);
+}
+.cmd-btn:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(var(--c), .6); }
+.cmd-btn:active:not(:disabled),
+.cmd-btn.sent {
+    transform: translateY(calc(var(--canto) - 1px));
+    box-shadow:
+        inset 0 2px 6px rgba(0, 0, 0, .3),
+        0 1px 0 0 rgba(var(--c), .55),
+        0 1px 0 0 #0a1020,
+        0 0 20px rgba(var(--c), .45);
+}
+.cmd-ico { box-shadow: inset 0 0 0 1px rgba(var(--c), .35), inset 0 2px 0 rgba(255, 255, 255, .15), 0 3px 0 rgba(0, 0, 0, .35); }
+
+/* Detener */
+.btn-stop {
+    --canto: 7px;
+    background: linear-gradient(180deg, #ff7f8a 0%, #f04456 55%, #d92f41 100%);
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, .35),
+        inset 0 -3px 0 rgba(0, 0, 0, .18),
+        0 var(--canto) 0 0 #9b1d2b,
+        0 calc(var(--canto) + 8px) 20px rgba(224, 58, 74, .45);
+}
+.btn-stop:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
+.btn-stop:active:not(:disabled) {
+    transform: translateY(calc(var(--canto) - 1px));
+    filter: brightness(.95);
+    box-shadow: inset 0 3px 8px rgba(0, 0, 0, .3), 0 1px 0 0 #9b1d2b, 0 0 24px rgba(224, 58, 74, .55);
+}
+
+/* Demos */
+.btn-demo-start {
+    background: linear-gradient(180deg, #62f0b2, #2fc584 60%, #24ad72);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35), 0 var(--canto) 0 0 #157048, 0 calc(var(--canto) + 6px) 16px rgba(38, 184, 120, .35);
+}
+.btn-demo-cancel {
+    background: linear-gradient(180deg, rgba(255, 93, 108, .26), rgba(255, 93, 108, .12)), #2a1626;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .1), 0 var(--canto) 0 0 #5c1824, 0 calc(var(--canto) + 6px) 14px rgba(0, 0, 0, .4);
+}
+.btn-demo:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); }
+.btn-demo-start:active:not(:disabled) {
+    transform: translateY(calc(var(--canto) - 1px));
+    box-shadow: inset 0 3px 8px rgba(0, 0, 0, .25), 0 1px 0 0 #157048;
+}
+.btn-demo-cancel:active:not(:disabled) {
+    transform: translateY(calc(var(--canto) - 1px));
+    box-shadow: inset 0 3px 8px rgba(0, 0, 0, .3), 0 1px 0 0 #5c1824;
+}
+
+/* Deshabilitados: sin relieve */
+.dir-btn:disabled, .cmd-btn:disabled, .btn-stop:disabled, .btn-demo:disabled {
+    transform: none;
+    box-shadow: 0 2px 0 0 #0a1020;
+}
+
+/* Espacio para el canto inferior en las cruces */
+.dpad-grid { padding-bottom: 6px; }
+
+/* Celular horizontal: canto más delgado */
+@media (max-height: 560px) and (orientation: landscape) {
+    .dir-btn, .cmd-btn, .btn-stop, .btn-demo { --canto: 3px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dir-btn, .cmd-btn, .btn-stop, .btn-demo { transition: none; }
+}
+
+/* Indicador de modo simulación */
+.status-group .sim-chip {
+    color: #c9b6ff !important;
+    background: rgba(150, 110, 255, .16) !important;
+    border: 1px solid rgba(150, 110, 255, .5);
+    animation: sim-pulso 2.4s ease-in-out infinite;
+}
+@keyframes sim-pulso { 50% { box-shadow: 0 0 12px rgba(150, 110, 255, .45); } }
