@@ -1355,3 +1355,30 @@ button:focus-visible, select:focus-visible {
     .velocimetro .velo-valor { margin: 0; }
     .velo-valor span { font-size: 1.15rem; }
 }
+
+/* Giroscopio: selector de modo y etiquetas de la mira */
+.ia-giro { flex-direction: column; gap: .5rem; }
+.ia-giro-modos { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; width: 100%; }
+.ia-giro-modo {
+    border: 1px solid rgba(61, 220, 151, .35); background: rgba(61, 220, 151, .06); color: #c7d2ec;
+    font-size: .72rem; font-weight: 600; border-radius: 10px; padding: .4rem .3rem;
+}
+.ia-giro-modo.activo { background: #3ddc97; color: #0a1020; border-color: #fff; box-shadow: 0 0 14px rgba(61, 220, 151, .45); }
+.ia-giro-fila { display: flex; align-items: center; justify-content: center; gap: .9rem; }
+.ia-giro-mira { margin: .7rem 1.6rem; }
+.giro-et {
+    position: absolute; font-size: .58rem; font-weight: 700; color: #3ddc97; white-space: nowrap; pointer-events: none;
+}
+.giro-et::before { content: attr(data-conducir); }
+.ia-giro-mira[data-modo="brazo"] .giro-et::before { content: attr(data-brazo); }
+.ia-giro-mira[data-modo="brazo"] { border-color: rgba(92, 200, 255, .55); }
+.ia-giro-mira[data-modo="brazo"] .giro-et { color: #5cc8ff; }
+.giro-arriba { top: -1rem; left: 50%; transform: translateX(-50%); }
+.giro-abajo { bottom: -1rem; left: 50%; transform: translateX(-50%); }
+.giro-izq { left: -1.6rem; top: 50%; transform: translateY(-50%); }
+.giro-der { right: -1.6rem; top: 50%; transform: translateY(-50%); }
+@media (max-width: 767px) {
+    .ia-giro { gap: .3rem; }
+    .ia-giro-mira { width: 70px; height: 70px; margin: .6rem 1.5rem; }
+    .ia-giro-modo { padding: .3rem .2rem; }
+}

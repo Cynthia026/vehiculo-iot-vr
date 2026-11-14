@@ -354,6 +354,16 @@ export class Scene3DManager {
             return;
         }
 
+        // Un movimiento nuevo reemplaza al anterior (voz, gestos o giroscopio pueden cambiar sin soltar)
+        const MOVIMIENTOS = ['AVANZAR', 'ADELANTE', 'RETROCEDER', 'ATRAS', 'GIRAR_IZQUIERDA', 'GIRAR_DERECHA', 'IZQUIERDA', 'DERECHA',
+            'SUBIR_BRAZO', 'BAJAR_BRAZO', 'MOTOR_IZQUIERDA', 'MOTOR_DERECHA'];
+        if (MOVIMIENTOS.includes(normCmd)) {
+            this.motionState.drive = 0;
+            this.motionState.turn = 0;
+            this.motionState.arm = 0;
+            this.motionState.turret = 0;
+        }
+
         if (normCmd === 'AVANZAR' || normCmd === 'ADELANTE') {
             this.motionState.drive = 1;
             this.motionState.turn = 0;

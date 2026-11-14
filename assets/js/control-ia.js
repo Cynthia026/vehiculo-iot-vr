@@ -466,6 +466,22 @@ export function comandoPorInclinacion(adelante, derecha, actual = null, umbral =
     return derecha > 0 ? 'GIRAR_DERECHA' : 'GIRAR_IZQUIERDA';
 }
 
+// Qué comando produce cada dirección de inclinación según el modo del giroscopio
+export const MAPA_GIRO = {
+    conducir: {
+        AVANZAR: 'AVANZAR',               // adelante
+        RETROCEDER: 'RETROCEDER',         // hacia ti
+        GIRAR_IZQUIERDA: 'GIRAR_IZQUIERDA',
+        GIRAR_DERECHA: 'GIRAR_DERECHA'
+    },
+    brazo: {
+        AVANZAR: 'BAJAR_BRAZO',           // adelante = bajar (como empujar una palanca)
+        RETROCEDER: 'SUBIR_BRAZO',        // hacia ti = subir (como jalar una palanca)
+        GIRAR_IZQUIERDA: 'MOTOR_IZQUIERDA',
+        GIRAR_DERECHA: 'MOTOR_DERECHA'
+    }
+};
+
 export class ControlGiroscopio {
     constructor(acciones, { indicador, punto }) {
         this.a = acciones;
@@ -473,8 +489,26 @@ export class ControlGiroscopio {
         this.punto = punto;
         this.activo = false;
         this.base = null;
-        this.cmd = null;
+        this.dir = null;   // dirección de inclinación actual (AVANZAR, RETROCEDER, GIRAR_*)
+        this.cmd = null;   // comando enviado según el modo
+        this.modo = 'conducir';
         this._onOri = (e) => this._orientacion(e);
+    }
+
+    // Cambia entre 'conducir' y 'brazo'. Si había un movimiento en curso, se detiene.
+    setModo(modo) {
+        if (!MAPA_GIRO[modo] || modo === this.modo) return;
+        this.modo = modo;
+        if (this.cmd) {
+            this.cmd = null;
+            this.a.soltar();
+        }
+        this.dir = null;
+        if (this.activo) {
+            this.a.estado(modo === 'brazo'
+                ? '📱 Modo brazo: inclina hacia ti para subir, adelante para bajar y a los lados para los motores'
+                : '📱 Modo conducir: inclina adelante/atrás para avanzar/retroceder y a los lados para girar');
+        }
     }
 
     async iniciar() {
@@ -503,6 +537,7 @@ export class ControlGiroscopio {
     detener() {
         this.activo = false;
         window.removeEventListener('deviceorientation', this._onOri);
+        this.dir = null;
         if (this.cmd) {
             this.cmd = null;
             this.a.soltar();
@@ -519,7 +554,9 @@ export class ControlGiroscopio {
         if (!this.activo || e.beta === null || e.gamma === null) return;
         if (!this.recibido) {
             this.recibido = true;
-            this.a.estado('📱 Giroscopio activo: inclina hacia adelante/atrás para avanzar/retroceder y a los lados para girar');
+            this.a.estado(this.modo === 'brazo'
+                ? '📱 Modo brazo: inclina hacia ti para subir, adelante para bajar y a los lados para los motores'
+                : '📱 Giroscopio activo: inclina hacia adelante/atrás para avanzar/retroceder y a los lados para girar');
         }
 
         // Ejes según la orientación de la pantalla
@@ -543,8 +580,10 @@ export class ControlGiroscopio {
             this.punto.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
         }
 
-        const nuevo = comandoPorInclinacion(adelante, derecha, this.cmd);
-        if (nuevo === this.cmd) return;
+        const dir = comandoPorInclinacion(adelante, derecha, this.dir);
+        if (dir === this.dir) return;
+        this.dir = dir;
+        const nuevo = dir ? MAPA_GIRO[this.modo][dir] : null;
         this.cmd = nuevo;
         if (nuevo) {
             this.a.presionar(nuevo);

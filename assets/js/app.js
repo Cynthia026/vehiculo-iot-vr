@@ -1,9 +1,9 @@
 // assets/js/app.js
-import { api } from './api.js?v=17';
-import { wsManager } from './websocket.js?v=17';
-import { ui, normalizar } from './ui.js?v=17';
-import { CONFIG } from './config.js?v=17';
-import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=17';
+import { api } from './api.js?v=18';
+import { wsManager } from './websocket.js?v=18';
+import { ui, normalizar } from './ui.js?v=18';
+import { CONFIG } from './config.js?v=18';
+import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=18';
 
 let catalogoComandos = [];
 let idComandoDetener = null;
@@ -83,9 +83,9 @@ async function inicializar() {
         let vrManager = null;
         let consola3d = null;
         try {
-            const { Scene3DManager } = await import('./scene3d.js?v=17');
-            const { VRManager } = await import('./vr-controls.js?v=17');
-            const { Consola3D } = await import('./botones3d.js?v=17');
+            const { Scene3DManager } = await import('./scene3d.js?v=18');
+            const { VRManager } = await import('./vr-controls.js?v=18');
+            const { Consola3D } = await import('./botones3d.js?v=18');
             scene3d = new Scene3DManager('three-canvas');
 
             const callbacksBotones = {
@@ -360,6 +360,22 @@ function configurarControlIA() {
     modos.voz.btn.addEventListener('click', () => alternar('voz'));
     modos.gestos.btn.addEventListener('click', () => alternar('gestos'));
     modos.giro.btn.addEventListener('click', () => alternar('giro'));
+    // Selector de modo del giroscopio: Conducir / Brazo y motores
+    document.querySelectorAll('.ia-giro-modo').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const modo = btn.dataset.modo;
+            modos.giro.ctrl.setModo(modo);
+            document.querySelectorAll('.ia-giro-modo').forEach((b) => {
+                const activo = b === btn;
+                b.classList.toggle('activo', activo);
+                b.setAttribute('aria-pressed', String(activo));
+            });
+            document.getElementById('ia-giro-mira').dataset.modo = modo;
+            ui.playSound('tap');
+            ui.vibrar(10);
+        });
+    });
+
     document.getElementById('btn-ia-calibrar').addEventListener('click', () => {
         modos.giro.ctrl.calibrar();
         acciones.estado('📱 Posición neutra recalibrada');
