@@ -77,6 +77,28 @@ Se muestra la imagen de la cámara con los puntos de la mano detectados. Si la m
 
 > Cámara, micrófono y giroscopio solo funcionan con **HTTPS** (GitHub Pages) o en `localhost`. Al cambiar de pestaña o minimizar, se apagan solos y el vehículo se detiene.
 
+### Asistente IA conversacional
+El botón **Asistente IA** de la barra superior abre un chat donde le pides cosas con tus palabras. El asistente arma un plan de pasos, lo muestra y lo ejecuta, marcando cada paso en curso y los terminados. **Detener** (o "alto") cancela el plan en cualquier momento.
+
+- **Sin configurar nada**, usa un intérprete local que entiende:
+  - secuencias: "avanza 2 segundos, luego gira a la derecha y enciende la luz"
+  - giros por ángulo: "gira 90 grados a la izquierda", "media vuelta", "da una vuelta completa"
+  - figuras y maniobras: "haz un cuadrado", "un triángulo", "zigzag", "baila", "saluda", "excava"
+  - repeticiones y pausas: "sube y baja el brazo 3 veces", "espera 2 segundos"
+- **Con IA (Claude)** entiende cualquier forma de pedirlo y también conversa ("¿qué puedes hacer?"). En ⚙ se configura de una de dos formas:
+  1. **Clave propia**: pega tu clave de API de Anthropic. Se guarda solo en ese navegador y se usa directamente desde ahí. Es ideal para pruebas personales; no la uses en computadoras compartidas.
+  2. **Servidor proxy** (recomendado para compartir la página): publica `server/cloudflare-worker.js` en Cloudflare Workers con tu clave como secreto y pega su URL. Así nadie ve la clave. Las instrucciones están dentro del archivo.
+- El modelo predeterminado es `claude-haiku-5-5` (rápido y económico) y se puede cambiar en ⚙.
+- Todo plan pasa por una validación antes de ejecutarse: solo comandos conocidos, máximo 10 s por movimiento, 30 pasos y 90 s en total.
+- Con el modo **Voz** activo, las frases complejas ("haz un cuadrado y luego toca el claxon") se envían automáticamente al asistente. El chat también tiene su propio botón de micrófono para dictar.
+
+### App instalable (PWA)
+- La página se puede **instalar como app** en el celular o la computadora, con su ícono, a pantalla completa y sin barra del navegador.
+  - **Android / Chrome / Edge**: aparece el botón **Instalar app** en la barra superior (o en el menú ⋮ → *Instalar aplicación*).
+  - **iPhone / iPad (Safari)**: Compartir → *Agregar a inicio*. El botón **Instalar app** muestra estas instrucciones.
+- **Funciona sin conexión** en modo simulación después de la primera visita, gracias al service worker (`sw.js`), que guarda la app y las librerías.
+- La app instalada tiene un atajo directo al **Asistente IA** (mantén presionado el ícono).
+
 ### Velocímetro
 - En el panel de Movimiento se muestra la **velocidad actual del vehículo en km/h**, con una barra de nivel.
 - Indica el modo (**Normal** o **Turbo**, que se activa con el botón Velocidad) y el estado: *Avanzando*, *Retrocediendo*, *Girando* o *Detenido*.
@@ -127,7 +149,8 @@ Se muestra la imagen de la cámara con los puntos de la mano detectados. Si la m
 | Interfaz | HTML5, CSS3, JavaScript (módulos ES, sin compilación) |
 | Estilos | Bootstrap 5.3, Bootstrap Icons, fuente Outfit |
 | 3D / VR | Three.js 0.170 (OrbitControls, WebXR, XRControllerModelFactory) |
-| IA | Web Speech API (voz) y MediaPipe Tasks Vision 0.10.21 · Gesture Recognizer (gestos) |
+| IA | Web Speech API (voz), MediaPipe Tasks Vision 0.10.21 · Gesture Recognizer (gestos) y API de Claude (asistente) |
+| App instalable | Web App Manifest + Service Worker |
 | Sensores | DeviceOrientation API (giroscopio) y getUserMedia (cámara) |
 | Comunicación | Fetch API (REST) y WebSocket seguro (WSS) |
 | Backend | API en AWS con base de datos Amazon RDS (MySQL) |
@@ -141,6 +164,8 @@ Three.js se carga con un **import map** desde jsDelivr, así que el proyecto fun
 ```
 vehiculo-iot-vr/
 ├── index.html                 # Página principal (vista de Control)
+├── manifest.webmanifest       # Datos de la app instalable (nombre, íconos, colores)
+├── sw.js                      # Service worker: caché y funcionamiento sin conexión
 ├── assets/
 │   ├── css/
 │   │   └── styles.css         # Estilos, distribución de paneles y diseño adaptable
@@ -153,12 +178,16 @@ vehiculo-iot-vr/
 │   │   ├── scene3d.js         # Escena Three.js y gemelo digital de la excavadora
 │   │   ├── botones3d.js       # Consola de botones 3D dentro de la escena
 │   │   ├── control-ia.js      # Control con IA: voz, gestos (MediaPipe) y giroscopio
+│   │   ├── asistente-ia.js    # Asistente conversacional: intérprete local + API de Claude
 │   │   ├── vr-controls.js     # Sesión WebXR, mandos y paneles flotantes
 │   │   └── joystick.js        # (Versión anterior, ya no se usa)
+│   ├── icons/                 # Íconos de la app instalable
 │   ├── data/
 │   ├── Favicon_Iot_vehiculo.png
 │   ├── Favicon_Iot_vehiculo.jpg
 │   └── favicon.ico
+├── server/
+│   └── cloudflare-worker.js   # Proxy opcional para usar la IA sin exponer la clave
 ├── docs/
 └── src/
 ```

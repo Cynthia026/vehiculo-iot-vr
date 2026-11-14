@@ -99,6 +99,14 @@ export function interpretarVoz(frase) {
     return null;
 }
 
+// Frases con varias órdenes o maniobras que no son un solo comando
+export function esFraseCompleja(frase) {
+    const t = ` ${sinAcentos(frase)} `;
+    if (/\b(alto|detente|deten|para|frena|stop)\b/.test(t) && t.trim().split(/\s+/).length <= 3) return false;
+    return /\b(y luego|luego|despues|entonces|veces|cuadrado|triangulo|zig ?zag|baila|saluda|excava|grados|vuelta|espera)\b/.test(t)
+        || / y (avanza|retrocede|gira|sube|baja|enciende|apaga|toca|activa|mueve|levanta|prende)/.test(t);
+}
+
 export class ControlVoz {
     constructor(acciones) {
         this.a = acciones;
@@ -170,6 +178,14 @@ export class ControlVoz {
             }
             if (this.ultimoParoInterino === i) continue; // ya se detuvo con el resultado parcial
 
+            // Secuencias y maniobras ("haz un cuadrado", "avanza y luego gira") las resuelve el asistente
+            if (this.a.consultarAsistente && esFraseCompleja(texto)) {
+                this._cancelarTimer(false);
+                this.a.estado(`🎤 "${texto.trim()}" → Asistente IA`);
+                this.a.consultarAsistente(texto);
+                continue;
+            }
+
             let accion = null;
             let oido = texto;
             for (let k = 0; k < res.length && !accion; k++) {
@@ -177,7 +193,10 @@ export class ControlVoz {
                 if (accion) oido = res[k].transcript;
             }
             if (accion) this._ejecutar(accion, oido);
-            else this.a.estado(`🎤 Escuché "${texto.trim()}" pero no es un comando`);
+            else if (this.a.consultarAsistente && texto.trim().split(/\s+/).length >= 3) {
+                this.a.estado(`🎤 "${texto.trim()}" → Asistente IA`);
+                this.a.consultarAsistente(texto);
+            } else this.a.estado(`🎤 Escuché "${texto.trim()}" pero no es un comando`);
         }
     }
 

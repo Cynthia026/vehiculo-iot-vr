@@ -1,14 +1,16 @@
 // assets/js/app.js
-import { api } from './api.js?v=19';
-import { wsManager } from './websocket.js?v=19';
-import { ui, normalizar } from './ui.js?v=19';
-import { CONFIG } from './config.js?v=19';
-import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=19';
+import { api } from './api.js?v=21';
+import { wsManager } from './websocket.js?v=21';
+import { ui, normalizar } from './ui.js?v=21';
+import { CONFIG } from './config.js?v=21';
+import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=21';
+import { AsistenteIA, describirPaso } from './asistente-ia.js?v=21';
 
 let catalogoComandos = [];
 let idComandoDetener = null;
 let vistaActual = 'control';
 let comandoActivoActual = null; // Evita envíos duplicados mientras se mantiene presionado un botón
+let asistente = null;           // Asistente IA conversacional (plan en curso se cancela con Detener)
 
 let reintentoTimer = null;
 let primerFallo = true;
@@ -83,9 +85,9 @@ async function inicializar() {
         let vrManager = null;
         let consola3d = null;
         try {
-            const { Scene3DManager } = await import('./scene3d.js?v=19');
-            const { VRManager } = await import('./vr-controls.js?v=19');
-            const { Consola3D } = await import('./botones3d.js?v=19');
+            const { Scene3DManager } = await import('./scene3d.js?v=21');
+            const { VRManager } = await import('./vr-controls.js?v=21');
+            const { Consola3D } = await import('./botones3d.js?v=21');
             scene3d = new Scene3DManager('three-canvas');
 
             const callbacksBotones = {
@@ -260,6 +262,8 @@ function configurarControlIA() {
         estado: (texto) => { if (estadoEl) estadoEl.textContent = texto; },
         feedback: (msg, tipo, dur) => ui.showFeedback(msg, tipo, dur),
         cambioEstado: (modo, activo) => marcar(modo, activo),
+        // Frases complejas de la voz ("haz un cuadrado y luego enciende la luz") van al asistente
+        consultarAsistente: (texto) => abrirAsistente?.(texto),
         // Estado actual de Luz / Velocidad para "enciende" / "apaga"
         estadoAccesorio: (cmd) => {
             const ms = ui.scene3d?.motionState;
@@ -400,6 +404,8 @@ function configurarControlIA() {
         btnAyuda.setAttribute('aria-expanded', String(abierta));
     });
 
+    const abrirAsistente = configurarAsistente(acciones, modos);
+
     // Al ocultar la página se apagan cámara, micrófono y giroscopio (y el vehículo se detiene)
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) return;
@@ -412,8 +418,200 @@ function configurarControlIA() {
     });
 }
 
+// --- ASISTENTE IA CONVERSACIONAL ---------------------------------------------------
+
+function configurarAsistente(acciones, modos) {
+    const $ = (id) => document.getElementById(id);
+    const panel = $('asistente');
+    const lista = $('asis-mensajes');
+    const entrada = $('asis-texto');
+    const btnAbrir = $('btn-asistente');
+    const formConfig = $('asis-config');
+
+    asistente = new AsistenteIA({
+        ...acciones,
+        estadoVehiculo: () => ({
+            luz: !!ui.scene3d?.motionState.lightsOn,
+            turbo: !!ui.scene3d?.motionState.highSpeed,
+            simulacion: modoSimulacion,
+            demos: [...$('demo-select').options].filter((o) => o.value).map((o) => o.textContent)
+        })
+    });
+
+    const actualizarModo = () => {
+        $('asis-modo').textContent = asistente.iaConfigurada
+            ? `IA de Claude · ${asistente.config.modelo}`
+            : 'Intérprete local (sin IA conectada)';
+    };
+    actualizarModo();
+
+    const abrir = (abierto) => {
+        panel.classList.toggle('d-none', !abierto);
+        btnAbrir.classList.toggle('activo', abierto);
+        btnAbrir.setAttribute('aria-expanded', String(abierto));
+        if (abierto) setTimeout(() => entrada.focus({ preventScroll: true }), 50);
+    };
+
+    const burbuja = (rol, texto) => {
+        const div = document.createElement('div');
+        div.className = `asis-msg ${rol}`;
+        const p = document.createElement('p');
+        p.textContent = texto;
+        div.appendChild(p);
+        lista.appendChild(div);
+        lista.scrollTop = lista.scrollHeight;
+        return div;
+    };
+
+    burbuja('bot', '¡Hola! Dime qué hacer con la excavadora. Por ejemplo: "haz un cuadrado", "gira 90 grados a la izquierda y enciende la luz" o "sube y baja el brazo 3 veces". Con el botón Detener paras cualquier plan.');
+
+    let ocupado = false;
+    async function enviar(texto) {
+        texto = String(texto || '').trim();
+        if (!texto || ocupado) return;
+        ocupado = true;
+        entrada.value = '';
+        burbuja('user', texto);
+        const pensando = burbuja('bot pensando', asistente.iaConfigurada ? 'Pensando…' : 'Interpretando…');
+
+        let res;
+        try {
+            res = await asistente.procesar(texto);
+        } catch (e) {
+            res = { respuesta: `Ocurrió un error: ${e.message}`, pasos: [] };
+        }
+        pensando.remove();
+        const msg = burbuja('bot', res.respuesta);
+        if (res.error) {
+            const nota = document.createElement('small');
+            nota.className = 'asis-error';
+            nota.textContent = `La IA no respondió (${res.error}). Usé el intérprete local.`;
+            msg.appendChild(nota);
+        }
+        ocupado = false;
+
+        if (!res.pasos.length) return;
+
+        // Lista de pasos con progreso
+        const ol = document.createElement('ol');
+        ol.className = 'asis-pasos';
+        res.pasos.forEach((p) => {
+            const li = document.createElement('li');
+            li.textContent = describirPaso(p);
+            ol.appendChild(li);
+        });
+        msg.appendChild(ol);
+        const pie = document.createElement('div');
+        pie.className = 'asis-pie';
+        const btnParar = document.createElement('button');
+        btnParar.type = 'button';
+        btnParar.className = 'asis-btn-parar';
+        btnParar.innerHTML = '<i class="bi bi-stop-fill"></i> Detener plan';
+        btnParar.onclick = () => pararTodo();
+        pie.appendChild(btnParar);
+        msg.appendChild(pie);
+        lista.scrollTop = lista.scrollHeight;
+
+        ui.playSound('start');
+        const items = ol.children;
+        let terminado = false;
+        try {
+            terminado = await asistente.ejecutar(res.pasos, (i, fase) => {
+                items[i].classList.toggle('en-curso', fase === 'inicio');
+                if (fase === 'fin') items[i].classList.add('hecho');
+            });
+        } catch (e) {
+            console.error('Plan del asistente:', e);
+        }
+        [...items].forEach((li) => li.classList.remove('en-curso'));
+        pie.innerHTML = terminado
+            ? '<span class="asis-ok"><i class="bi bi-check-circle-fill"></i> Plan completado</span>'
+            : '<span class="asis-cancel"><i class="bi bi-stop-circle-fill"></i> Plan detenido</span>';
+        lista.scrollTop = lista.scrollHeight;
+    }
+
+    btnAbrir.addEventListener('click', () => {
+        ui.playSound('tap');
+        abrir(panel.classList.contains('d-none'));
+    });
+    $('asis-btn-cerrar').addEventListener('click', () => abrir(false));
+    $('asis-btn-limpiar').addEventListener('click', () => {
+        asistente.reiniciarConversacion();
+        lista.innerHTML = '';
+        burbuja('bot', 'Conversación nueva. ¿Qué hacemos?');
+    });
+    $('asis-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        enviar(entrada.value);
+    });
+    $('asis-sugerencias').addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON') enviar(e.target.textContent);
+    });
+    // Las teclas del chat no deben mover el vehículo
+    entrada.addEventListener('keydown', (e) => e.stopPropagation());
+    entrada.addEventListener('keyup', (e) => e.stopPropagation());
+
+    // Configuración de la IA
+    $('asis-btn-config').addEventListener('click', () => {
+        const abierta = formConfig.classList.toggle('d-none') === false;
+        if (abierta) {
+            $('asis-api-key').value = asistente.config.apiKey || '';
+            $('asis-proxy').value = asistente.config.proxyUrl || '';
+            $('asis-modelo').value = asistente.config.modelo || '';
+        }
+    });
+    formConfig.querySelectorAll('input').forEach((i) => {
+        i.addEventListener('keydown', (e) => e.stopPropagation());
+        i.addEventListener('keyup', (e) => e.stopPropagation());
+    });
+    formConfig.addEventListener('submit', (e) => {
+        e.preventDefault();
+        asistente.guardarConfig({
+            apiKey: $('asis-api-key').value.trim(),
+            proxyUrl: $('asis-proxy').value.trim(),
+            modelo: $('asis-modelo').value.trim()
+        });
+        formConfig.classList.add('d-none');
+        actualizarModo();
+        burbuja('bot', asistente.iaConfigurada ? 'IA conectada. Ahora puedes hablarme con más libertad.' : 'Sin IA: usaré el intérprete local.');
+    });
+    $('asis-config-borrar').addEventListener('click', () => {
+        asistente.guardarConfig({ apiKey: '', proxyUrl: '' });
+        $('asis-api-key').value = '';
+        $('asis-proxy').value = '';
+        actualizarModo();
+        burbuja('bot', 'Clave borrada de este navegador.');
+    });
+
+    // Dictado de una sola frase para el chat
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const btnMic = $('asis-mic');
+    if (!SR) btnMic.classList.add('d-none');
+    btnMic.addEventListener('click', () => {
+        if (modos.voz.activo) {
+            ui.showFeedback('El modo Voz ya está activo: di tu orden en voz alta', 'info', 2500);
+            return;
+        }
+        const rec = new SR();
+        rec.lang = 'es-MX';
+        rec.interimResults = false;
+        btnMic.classList.add('escuchando');
+        rec.onresult = (e) => enviar(e.results[0][0].transcript);
+        rec.onend = () => btnMic.classList.remove('escuchando');
+        rec.onerror = () => btnMic.classList.remove('escuchando');
+        try { rec.start(); } catch { btnMic.classList.remove('escuchando'); }
+    });
+
+    // Para la voz: abre el chat y envía la frase
+    return (texto) => {
+        abrir(true);
+        enviar(texto);
+    };
+}
+
 // Paro inmediato (botón Detener, barra espaciadora, botón rojo 3D y grip en VR)
 function pararTodo() {
+    if (asistente?.cancelar()) ui.showFeedback('Plan del asistente detenido', 'warning', 2000);
     cancelarDemoSimulada(false);
     ui.limpiarResaltadoDemo();
     ui.playSound('stop');
@@ -756,4 +954,52 @@ async function detenerVehiculo() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', inicializar);
+// --- APP INSTALABLE (PWA) ------------------------------------------------------
+
+function configurarPWA() {
+    // Service worker: la app abre sin conexión (modo simulación) y carga más rápido
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('Service worker no registrado:', e));
+    }
+
+    const btn = document.getElementById('btn-instalar');
+    const instalada = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (!btn || instalada) return;
+
+    let aviso = null;
+    // Chrome / Edge / Android: el navegador avisa cuando la app se puede instalar
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        aviso = e;
+        btn.classList.remove('d-none');
+    });
+    window.addEventListener('appinstalled', () => {
+        btn.classList.add('d-none');
+        ui.showFeedback('¡App instalada! Ya la tienes en tu pantalla de inicio.', 'success', 3500);
+    });
+
+    // iPhone / iPad: no hay aviso automático; se explica cómo agregarla
+    const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (esIOS) btn.classList.remove('d-none');
+
+    btn.addEventListener('click', async () => {
+        if (aviso) {
+            aviso.prompt();
+            const { outcome } = await aviso.userChoice;
+            if (outcome === 'accepted') btn.classList.add('d-none');
+            aviso = null;
+        } else if (esIOS) {
+            ui.showFeedback('En Safari toca Compartir (□↑) y luego "Agregar a inicio"', 'info', 6000);
+        }
+    });
+
+    // Atajo de la app instalada: abrir directamente el Asistente IA
+    if (new URLSearchParams(location.search).get('asistente') === '1') {
+        setTimeout(() => document.getElementById('btn-asistente')?.click(), 1200);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    inicializar();
+    configurarPWA();
+});
