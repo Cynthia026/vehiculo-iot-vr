@@ -61,7 +61,16 @@ Se muestra la imagen de la cámara con los puntos de la mano detectados. Si la m
 
 **📱 Giroscopio** (desde el celular)
 - Al activarlo se toma la posición actual como neutra (el botón **Recalibrar** la vuelve a tomar).
-- Inclinar hacia adelante o atrás avanza o retrocede; inclinar a los lados gira. Al regresar a la posición neutra se detiene.
+- Tiene dos modos, que se eligen dentro del panel:
+
+  | Inclinación | 🚜 Conducir | 🦾 Brazo y motores |
+  |---|---|---|
+  | Hacia adelante (alejar la parte de arriba) | Avanzar | Bajar brazo |
+  | Hacia ti | Retroceder | Subir brazo |
+  | A la izquierda | Girar izquierda | Motor izquierdo |
+  | A la derecha | Girar derecha | Motor derecho |
+
+- Hay que inclinar unos 14° para que reaccione. Al regresar a la posición neutra se detiene. Al cambiar de modo, el movimiento en curso se detiene.
 - Un indicador muestra la inclinación en tiempo real. Funciona mejor con el celular en vertical. En iPhone pide permiso de movimiento.
 
 > Cámara, micrófono y giroscopio solo funcionan con **HTTPS** (GitHub Pages) o en `localhost`. Al cambiar de pestaña o minimizar, se apagan solos y el vehículo se detiene.
