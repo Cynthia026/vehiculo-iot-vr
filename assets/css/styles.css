@@ -1196,3 +1196,162 @@ button:focus-visible, select:focus-visible {
     .velo-valor span { font-size: 1rem; }
     .velo-barra, .velo-estado, .velo-cab { display: none; }
 }
+
+
+/* =====================================================================
+   CONTROL CON IA (voz, gestos y giroscopio)
+   ===================================================================== */
+.area-ia { grid-area: ia; }
+
+/* Celular vertical */
+.vista-control {
+    grid-template-rows: auto auto auto 1fr auto;
+    grid-template-areas:
+        "acc   acc"
+        "arm   drive"
+        "ia    ia"
+        "hint  hint"
+        "demo  demo";
+}
+@media (min-width: 768px) {
+    .vista-control {
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+            "arm  acc   drive"
+            "arm  hint  drive"
+            "ia   demo  drive";
+    }
+    .area-arm { align-self: center; }
+    .area-ia  { align-self: end; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+    .vista-control {
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+            "arm  acc   drive"
+            "arm  hint  drive"
+            "ia   demo  drive";
+    }
+    .area-ia .ia-estado, .area-ia .ia-cab { display: none; }
+}
+
+.area-ia { display: flex; flex-direction: column; gap: .5rem; padding: .7rem; }
+.ia-cab { display: flex; align-items: center; justify-content: space-between; }
+.ia-cab .panel-title { margin: 0; }
+.ia-ayuda-btn {
+    border: 0; background: transparent; color: var(--muted); font-size: 1rem; padding: .1rem .3rem; border-radius: 8px;
+}
+.ia-ayuda-btn:hover, .ia-ayuda-btn[aria-expanded="true"] { color: #eef1f8; background: rgba(255, 255, 255, .06); }
+
+.ia-modos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
+.ia-btn {
+    --c: 160, 130, 255;
+    --canto: 5px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem;
+    min-height: 58px; padding: .35rem .2rem;
+    border-radius: 14px; border: 1px solid rgba(var(--c), .35);
+    color: #e3e8f6; font-size: .72rem; font-weight: 600;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, 0) 40%),
+        linear-gradient(180deg, rgba(var(--c), .2), rgba(var(--c), .05) 65%),
+        #18233f;
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, .13),
+        0 var(--canto) 0 0 rgba(var(--c), .34),
+        0 var(--canto) 0 0 #0a1020,
+        0 calc(var(--canto) + 6px) 14px rgba(0, 0, 0, .45);
+    transition: transform .07s ease, box-shadow .07s ease, background .15s ease;
+}
+.ia-btn i { font-size: 1.25rem; color: rgb(var(--c)); }
+.ia-btn:hover { transform: translateY(-1px); }
+.ia-btn:active { transform: translateY(calc(var(--canto) - 1px)); box-shadow: inset 0 2px 6px rgba(0, 0, 0, .3), 0 1px 0 0 rgba(var(--c), .5); }
+.ia-btn.activo {
+    transform: translateY(calc(var(--canto) - 1px));
+    color: #0a1020;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, 0) 50%), rgb(var(--c));
+    border-color: #fff;
+    box-shadow: 0 1px 0 0 rgba(var(--c), .6), 0 0 20px rgba(var(--c), .6);
+}
+.ia-btn.activo i { color: #0a1020; }
+.ia-btn.cargando { opacity: .7; pointer-events: none; }
+.ia-btn.cargando i { animation: ia-giro 1s linear infinite; }
+#btn-ia-voz { --c: 255, 120, 170; }
+#btn-ia-gestos { --c: 92, 200, 255; }
+#btn-ia-giro { --c: 61, 220, 151; }
+#btn-ia-voz.activo i { animation: ia-pulso 1.2s ease-in-out infinite; }
+@keyframes ia-pulso { 50% { transform: scale(1.25); } }
+@keyframes ia-giro { to { transform: rotate(360deg); } }
+
+.ia-estado {
+    font-size: .72rem; color: var(--muted); line-height: 1.35;
+    min-height: 2.1em;
+}
+.ia-camara {
+    position: relative; width: 100%; max-width: 260px; align-self: center;
+    aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden;
+    border: 1px solid rgba(92, 200, 255, .4); background: #050a16;
+}
+.ia-camara video, .ia-camara canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    transform: scaleX(-1); /* espejo */
+}
+.ia-gesto {
+    position: absolute; left: 50%; bottom: .35rem; transform: translateX(-50%);
+    padding: .15rem .55rem; border-radius: 999px; font-size: .75rem; font-weight: 700;
+    background: rgba(5, 10, 22, .75); color: #eef1f8; white-space: nowrap;
+}
+.ia-gesto:empty { display: none; }
+
+.ia-giro { display: flex; align-items: center; justify-content: center; gap: .8rem; }
+.ia-giro-mira {
+    position: relative; width: 96px; height: 96px; border-radius: 50%;
+    border: 1px solid rgba(61, 220, 151, .45);
+    background:
+        radial-gradient(circle, rgba(61, 220, 151, .18) 0 18%, transparent 19%),
+        linear-gradient(rgba(61, 220, 151, .25), rgba(61, 220, 151, .25)) center / 1px 100% no-repeat,
+        linear-gradient(rgba(61, 220, 151, .25), rgba(61, 220, 151, .25)) center / 100% 1px no-repeat,
+        #0b1428;
+}
+.ia-giro-punto {
+    position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; border-radius: 50%;
+    background: #3ddc97; box-shadow: 0 0 12px #3ddc97;
+    transform: translate(-50%, -50%); transition: transform .08s linear;
+}
+.ia-calibrar {
+    border: 1px solid rgba(61, 220, 151, .45); background: rgba(61, 220, 151, .12); color: #3ddc97;
+    font-size: .72rem; font-weight: 600; border-radius: 10px; padding: .35rem .6rem;
+}
+.ia-ayuda { font-size: .7rem; color: #c7d2ec; line-height: 1.4; max-height: 170px; overflow-y: auto; pointer-events: auto; }
+.ia-ayuda p { margin: 0 0 .35rem; }
+
+@media (max-width: 767px) {
+    .area-ia { padding: .5rem .6rem; gap: .35rem; }
+    .ia-btn { min-height: 44px; flex-direction: row; font-size: .75rem; }
+    .ia-btn i { font-size: 1rem; }
+    .ia-estado { min-height: 0; }
+    .ia-camara { max-width: 180px; }
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+    .ia-btn { font-size: .66rem; }
+    .ia-camara { max-width: 200px; }
+}
+
+/* El aviso de "arrastra para rotar" tapaba la consola 3D */
+.area-hint .stage-pill { display: none; }
+
+/* Celular vertical: panel de IA y velocímetro compactos para que quepan las demos */
+@media (max-width: 767px) {
+    .area-ia .ia-cab { display: none; }
+    .area-ia .ia-estado {
+        display: none;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .68rem;
+    }
+    .area-ia.con-modo .ia-estado { display: block; }
+    .ia-btn { min-height: 38px; }
+
+    .velocimetro { display: flex; align-items: center; justify-content: space-between; padding: .3rem .5rem; }
+    .velocimetro .velo-cab, .velocimetro .velo-barra, .velocimetro .velo-estado { display: none; }
+    .velocimetro .velo-top { order: 2; }
+    .velocimetro .velo-valor { margin: 0; }
+    .velo-valor span { font-size: 1.15rem; }
+}

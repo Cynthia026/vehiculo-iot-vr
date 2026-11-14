@@ -28,6 +28,44 @@ Aplicación web para **controlar y monitorear en tiempo real una excavadora IoT*
   | `Q` / `E` | Motor izquierda / derecha |
   | `Espacio` | Detener |
 
+### Control con IA: voz, gestos y giroscopio
+En el panel **Control con IA** (abajo a la izquierda) se activa cada modo con su botón. El botón **?** muestra la lista de comandos. Los tres modos usan la misma lógica segura que los botones: el vehículo se mueve mientras dura el comando y luego se envía DETENER.
+
+**🎤 Voz** (reconocimiento de voz del navegador, español de México)
+| Frase | Acción |
+|---|---|
+| "avanza", "sigue derecho", "avanza 3 segundos" | Avanzar (2 s por defecto, hasta 10 s) |
+| "retrocede", "reversa" | Retroceder |
+| "gira a la derecha / izquierda" | Girar |
+| "sube el brazo", "baja la pala" | Brazo |
+| "motor derecho / izquierdo" | Motores |
+| "enciende / apaga la luz" | Luz (no la cambia si ya está como pediste) |
+| "activa el turbo", "velocidad normal" | Velocidad |
+| "toca el claxon" | Sonido |
+| "inicia la demo de excavación", "cancela la demo" | Demos |
+| **"alto"**, "detente", "para", "frena" | Detener al instante, aunque la frase no haya terminado |
+
+Funciona en Chrome y Edge (escritorio y Android) y requiere internet. Firefox y el navegador de Meta Quest no lo soportan.
+
+**✋ Gestos** (cámara + modelo de IA *MediaPipe Gesture Recognizer* de Google, que corre en el navegador)
+| Gesto | Acción |
+|---|---|
+| ☝ Índice apuntando arriba / abajo | Avanzar / Retroceder |
+| 👉 👈 Índice apuntando a un lado | Girar hacia ese lado |
+| ✋ Palma abierta o ✊ puño | Detener |
+| 👍 / 👎 | Subir / bajar brazo |
+| ✌ Victoria | Luz |
+| 🤟 "Te quiero" | Sonido |
+
+Se muestra la imagen de la cámara con los puntos de la mano detectados. Si la mano sale de la imagen, el vehículo se detiene. La imagen de la cámara no sale del navegador.
+
+**📱 Giroscopio** (desde el celular)
+- Al activarlo se toma la posición actual como neutra (el botón **Recalibrar** la vuelve a tomar).
+- Inclinar hacia adelante o atrás avanza o retrocede; inclinar a los lados gira. Al regresar a la posición neutra se detiene.
+- Un indicador muestra la inclinación en tiempo real. Funciona mejor con el celular en vertical. En iPhone pide permiso de movimiento.
+
+> Cámara, micrófono y giroscopio solo funcionan con **HTTPS** (GitHub Pages) o en `localhost`. Al cambiar de pestaña o minimizar, se apagan solos y el vehículo se detiene.
+
 ### Velocímetro
 - En el panel de Movimiento se muestra la **velocidad actual del vehículo en km/h**, con una barra de nivel.
 - Indica el modo (**Normal** o **Turbo**, que se activa con el botón Velocidad) y el estado: *Avanzando*, *Retrocediendo*, *Girando* o *Detenido*.
@@ -78,6 +116,8 @@ Aplicación web para **controlar y monitorear en tiempo real una excavadora IoT*
 | Interfaz | HTML5, CSS3, JavaScript (módulos ES, sin compilación) |
 | Estilos | Bootstrap 5.3, Bootstrap Icons, fuente Outfit |
 | 3D / VR | Three.js 0.170 (OrbitControls, WebXR, XRControllerModelFactory) |
+| IA | Web Speech API (voz) y MediaPipe Tasks Vision 0.10.21 · Gesture Recognizer (gestos) |
+| Sensores | DeviceOrientation API (giroscopio) y getUserMedia (cámara) |
 | Comunicación | Fetch API (REST) y WebSocket seguro (WSS) |
 | Backend | API en AWS con base de datos Amazon RDS (MySQL) |
 
@@ -101,6 +141,7 @@ vehiculo-iot-vr/
 │   │   ├── ui.js              # Renderizado de la interfaz, sonidos y estados
 │   │   ├── scene3d.js         # Escena Three.js y gemelo digital de la excavadora
 │   │   ├── botones3d.js       # Consola de botones 3D dentro de la escena
+│   │   ├── control-ia.js      # Control con IA: voz, gestos (MediaPipe) y giroscopio
 │   │   ├── vr-controls.js     # Sesión WebXR, mandos y paneles flotantes
 │   │   └── joystick.js        # (Versión anterior, ya no se usa)
 │   ├── data/

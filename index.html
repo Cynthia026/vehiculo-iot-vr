@@ -17,7 +17,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <link rel="stylesheet" href="assets/css/styles.css?v=16">
+    <link rel="stylesheet" href="assets/css/styles.css?v=17">
 
     <!-- Import Map nativo para Three.js y WebXR sin necesidad de compilación -->
     <script type="importmap">
@@ -135,6 +135,45 @@
                         <i class="bi bi-arrow-bar-down"></i>
                         <span>Bajar brazo</span>
                     </button>
+                </div>
+            </section>
+
+            <!-- ABAJO IZQUIERDA: Control con IA (voz, gestos y giroscopio) -->
+            <section class="panel area-ia" aria-label="Control con IA">
+                <div class="ia-cab">
+                    <h2 class="panel-title"><i class="bi bi-stars"></i> Control con IA</h2>
+                    <button type="button" class="ia-ayuda-btn" id="btn-ia-ayuda" aria-expanded="false" title="Ver comandos">
+                        <i class="bi bi-question-circle"></i>
+                    </button>
+                </div>
+                <div class="ia-modos" role="group" aria-label="Modos de control con IA">
+                    <button type="button" class="ia-btn" id="btn-ia-voz" aria-pressed="false">
+                        <i class="bi bi-mic-fill"></i><span>Voz</span>
+                    </button>
+                    <button type="button" class="ia-btn" id="btn-ia-gestos" aria-pressed="false">
+                        <i class="bi bi-hand-index-thumb-fill"></i><span>Gestos</span>
+                    </button>
+                    <button type="button" class="ia-btn" id="btn-ia-giro" aria-pressed="false">
+                        <i class="bi bi-phone-flip"></i><span>Giroscopio</span>
+                    </button>
+                </div>
+                <div class="ia-estado" id="ia-estado">Controla el vehículo con tu voz, tus manos o inclinando el celular.</div>
+
+                <div class="ia-camara d-none" id="ia-camara">
+                    <video id="ia-video" playsinline muted></video>
+                    <canvas id="ia-canvas"></canvas>
+                    <span class="ia-gesto" id="ia-gesto"></span>
+                </div>
+
+                <div class="ia-giro d-none" id="ia-giro">
+                    <div class="ia-giro-mira"><div class="ia-giro-punto" id="ia-giro-punto"></div></div>
+                    <button type="button" class="ia-calibrar" id="btn-ia-calibrar"><i class="bi bi-crosshair"></i> Recalibrar</button>
+                </div>
+
+                <div class="ia-ayuda d-none" id="ia-ayuda">
+                    <p><b>🎤 Voz:</b> "avanza", "avanza 3 segundos", "retrocede", "gira a la derecha", "sube el brazo", "motor izquierdo", "enciende la luz", "activa el turbo", "toca el claxon", "inicia la demo de excavación", "cancela la demo", <b>"alto"</b>.</p>
+                    <p><b>✋ Gestos:</b> ☝ apunta con el índice arriba/abajo/a los lados para avanzar, retroceder o girar · ✋ palma o ✊ puño = detener · 👍/👎 subir/bajar brazo · ✌ luz · 🤟 sonido.</p>
+                    <p><b>📱 Giroscopio:</b> inclina el celular hacia adelante o atrás para avanzar o retroceder, y a los lados para girar. Regresa a la posición inicial para detener.</p>
                 </div>
             </section>
 
@@ -264,6 +303,6 @@
         Desarrollado por Cynthia Martínez García &middot; 2026 &middot; Control y Monitoreo IoT 3D / WebXR
     </footer>
 
-    <script type="module" src="assets/js/app.js?v=16"></script>
+    <script type="module" src="assets/js/app.js?v=17"></script>
 </body>
 </html>

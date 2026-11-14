@@ -1,8 +1,9 @@
 // assets/js/app.js
-import { api } from './api.js?v=16';
-import { wsManager } from './websocket.js?v=16';
-import { ui, normalizar } from './ui.js?v=16';
-import { CONFIG } from './config.js?v=16';
+import { api } from './api.js?v=17';
+import { wsManager } from './websocket.js?v=17';
+import { ui, normalizar } from './ui.js?v=17';
+import { CONFIG } from './config.js?v=17';
+import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=17';
 
 let catalogoComandos = [];
 let idComandoDetener = null;
@@ -82,9 +83,9 @@ async function inicializar() {
         let vrManager = null;
         let consola3d = null;
         try {
-            const { Scene3DManager } = await import('./scene3d.js?v=16');
-            const { VRManager } = await import('./vr-controls.js?v=16');
-            const { Consola3D } = await import('./botones3d.js?v=16');
+            const { Scene3DManager } = await import('./scene3d.js?v=17');
+            const { VRManager } = await import('./vr-controls.js?v=17');
+            const { Consola3D } = await import('./botones3d.js?v=17');
             scene3d = new Scene3DManager('three-canvas');
 
             const callbacksBotones = {
@@ -136,6 +137,7 @@ async function inicializar() {
         // 2. Mostrar la interfaz de inmediato en MODO SIMULACIÓN hasta que AWS responda
         activarSimulacion();
         configurarControles(scene3d);
+        configurarControlIA();
 
         // 3. Conectar WSS y enlazar la escucha de mensajes
         wsManager.onMessage = procesarMensajeWSS;
@@ -240,6 +242,146 @@ function configurarControles(scene3d) {
         vistaActual = 'monitoreo';
         ui.switchView('monitoreo');
         cargarDatosMonitoreo();
+    });
+}
+
+// --- CONTROL CON IA: voz, gestos (cámara) y giroscopio --------------------------
+
+function configurarControlIA() {
+    const estadoEl = document.getElementById('ia-estado');
+    const normalizarTexto = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    const acciones = {
+        presionar: (cmd) => presionarBotonDireccion(cmd),
+        soltar: () => soltarBotonDireccion(),
+        accesorio: (cmd) => accionAccesorio(cmd),
+        parar: () => pararTodo(),
+        cancelarDemo: () => cancelarDemo(),
+        estado: (texto) => { if (estadoEl) estadoEl.textContent = texto; },
+        feedback: (msg, tipo, dur) => ui.showFeedback(msg, tipo, dur),
+        cambioEstado: (modo, activo) => marcar(modo, activo),
+        // Estado actual de Luz / Velocidad para "enciende" / "apaga"
+        estadoAccesorio: (cmd) => {
+            const ms = ui.scene3d?.motionState;
+            if (!ms) return null;
+            if (cmd === 'LUZ') return ms.lightsOn;
+            if (cmd === 'VELOCIDAD') return ms.highSpeed;
+            return null;
+        },
+        // Busca la demo por nombre ("excavación", "recorrido") o la primera si no se dice cuál
+        iniciarDemo: (texto) => {
+            const select = document.getElementById('demo-select');
+            const opciones = [...select.options].filter((o) => o.value);
+            if (!opciones.length) return false;
+            const palabras = normalizarTexto(texto).split(/\s+/).filter((p) => p.length > 3);
+            const numero = parseInt(texto, 10);
+            let opcion = null;
+            if (!Number.isNaN(numero)) opcion = opciones[numero - 1];
+            if (!opcion && palabras.length) opcion = opciones.find((o) => palabras.some((p) => normalizarTexto(o.textContent).includes(p)));
+            if (!opcion && !palabras.length) opcion = opciones[0];
+            if (!opcion) return false;
+            select.value = opcion.value;
+            iniciarDemo(opcion.value);
+            return true;
+        }
+    };
+
+    const modos = {
+        voz: {
+            btn: document.getElementById('btn-ia-voz'),
+            ctrl: new ControlVoz(acciones)
+        },
+        gestos: {
+            btn: document.getElementById('btn-ia-gestos'),
+            panel: document.getElementById('ia-camara'),
+            ctrl: new ControlGestos(acciones, {
+                video: document.getElementById('ia-video'),
+                canvas: document.getElementById('ia-canvas'),
+                etiqueta: document.getElementById('ia-gesto')
+            })
+        },
+        giro: {
+            btn: document.getElementById('btn-ia-giro'),
+            panel: document.getElementById('ia-giro'),
+            ctrl: new ControlGiroscopio(acciones, {
+                punto: document.getElementById('ia-giro-punto')
+            })
+        }
+    };
+
+    function marcar(modo, activo) {
+        const m = modos[modo];
+        m.activo = activo;
+        m.btn.classList.toggle('activo', activo);
+        m.btn.setAttribute('aria-pressed', String(activo));
+        m.panel?.classList.toggle('d-none', !activo);
+        document.querySelector('.area-ia')?.classList.toggle('con-modo', Object.values(modos).some((x) => x.activo));
+    }
+
+    const mensajeError = (modo, e) => {
+        if (e?.name === 'NotAllowedError' || e?.name === 'SecurityError') {
+            return modo === 'gestos' ? 'Permiso de cámara denegado.' : 'Permiso denegado.';
+        }
+        if (e?.name === 'NotFoundError' || e?.name === 'OverconstrainedError') return 'No se encontró una cámara en este dispositivo.';
+        if (modo === 'gestos' && /import|fetch|module|Failed/i.test(String(e?.message))) {
+            return 'No se pudo cargar el modelo de IA de gestos. Revisa tu conexión a internet.';
+        }
+        return e?.message || 'No se pudo activar este modo.';
+    };
+
+    async function alternar(modo) {
+        const m = modos[modo];
+        if (m.activo) {
+            m.ctrl.detener();
+            marcar(modo, false);
+            ui.playSound('cancel');
+            acciones.estado('Modo desactivado.');
+            return;
+        }
+        m.btn.classList.add('cargando');
+        if (modo === 'gestos') m.panel.classList.remove('d-none');
+        try {
+            await m.ctrl.iniciar();
+            if (!m.ctrl.activo && modo !== 'voz') throw new Error('Activación cancelada.');
+            marcar(modo, true);
+            ui.playSound('start');
+        } catch (e) {
+            console.error(`Control con IA (${modo}):`, e);
+            m.ctrl.detener();
+            marcar(modo, false);
+            const msg = mensajeError(modo, e);
+            acciones.estado(`⚠ ${msg}`);
+            ui.showFeedback(msg, 'warning', 4000);
+        } finally {
+            m.btn.classList.remove('cargando');
+        }
+    }
+
+    modos.voz.btn.addEventListener('click', () => alternar('voz'));
+    modos.gestos.btn.addEventListener('click', () => alternar('gestos'));
+    modos.giro.btn.addEventListener('click', () => alternar('giro'));
+    document.getElementById('btn-ia-calibrar').addEventListener('click', () => {
+        modos.giro.ctrl.calibrar();
+        acciones.estado('📱 Posición neutra recalibrada');
+        ui.playSound('tap');
+    });
+
+    const btnAyuda = document.getElementById('btn-ia-ayuda');
+    btnAyuda.addEventListener('click', () => {
+        const ayuda = document.getElementById('ia-ayuda');
+        const abierta = ayuda.classList.toggle('d-none') === false;
+        btnAyuda.setAttribute('aria-expanded', String(abierta));
+    });
+
+    // Al ocultar la página se apagan cámara, micrófono y giroscopio (y el vehículo se detiene)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) return;
+        Object.entries(modos).forEach(([modo, m]) => {
+            if (m.activo) {
+                m.ctrl.detener();
+                marcar(modo, false);
+            }
+        });
     });
 }
 
