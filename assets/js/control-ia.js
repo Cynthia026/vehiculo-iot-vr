@@ -178,6 +178,12 @@ export class ControlVoz {
             }
             if (this.ultimoParoInterino === i) continue; // ya se detuvo con el resultado parcial
 
+            // Comandos propios de otros modos (p. ej. "salir" en VR celular)
+            if (this.a.interceptar?.(texto)) {
+                this.a.estado(`🎤 "${texto.trim()}"`);
+                continue;
+            }
+
             // Secuencias y maniobras ("haz un cuadrado", "avanza y luego gira") las resuelve el asistente
             if (this.a.consultarAsistente && esFraseCompleja(texto)) {
                 this._cancelarTimer(false);

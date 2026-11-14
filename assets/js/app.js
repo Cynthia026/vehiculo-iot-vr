@@ -1,16 +1,18 @@
 // assets/js/app.js
-import { api } from './api.js?v=22';
-import { wsManager } from './websocket.js?v=22';
-import { ui, normalizar } from './ui.js?v=22';
-import { CONFIG } from './config.js?v=22';
-import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=22';
-import { AsistenteIA, describirPaso } from './asistente-ia.js?v=22';
+import { api } from './api.js?v=23';
+import { wsManager } from './websocket.js?v=23';
+import { ui, normalizar } from './ui.js?v=23';
+import { CONFIG } from './config.js?v=23';
+import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=23';
+import { AsistenteIA, describirPaso } from './asistente-ia.js?v=23';
 
 let catalogoComandos = [];
 let idComandoDetener = null;
 let vistaActual = 'control';
 let comandoActivoActual = null; // Evita envíos duplicados mientras se mantiene presionado un botón
 let asistente = null;           // Asistente IA conversacional (plan en curso se cancela con Detener)
+let vrCelular = null;           // Modo VR celular (Cardboard)
+let controlIA = null;           // Acceso a los modos Voz / Gestos / Giroscopio
 
 let reintentoTimer = null;
 let primerFallo = true;
@@ -85,9 +87,10 @@ async function inicializar() {
         let vrManager = null;
         let consola3d = null;
         try {
-            const { Scene3DManager } = await import('./scene3d.js?v=22');
-            const { VRManager } = await import('./vr-controls.js?v=22');
-            const { Consola3D } = await import('./botones3d.js?v=22');
+            const { Scene3DManager } = await import('./scene3d.js?v=23');
+            const { VRManager } = await import('./vr-controls.js?v=23');
+            const { Consola3D } = await import('./botones3d.js?v=23');
+            const { VRCelular, vrCelularDisponible } = await import('./vr-celular.js?v=23');
             scene3d = new Scene3DManager('three-canvas');
 
             const callbacksBotones = {
@@ -101,6 +104,18 @@ async function inicializar() {
             };
 
             consola3d = new Consola3D(scene3d, callbacksBotones);
+
+            // VR celular (Cardboard): solo en celulares sin WebXR, así no aparece en Meta Quest
+            vrCelular = new VRCelular(scene3d, {
+                presionar: (cmd) => presionarBotonDireccion(cmd),
+                soltar: () => soltarBotonDireccion(),
+                accesorio: (cmd) => accionAccesorio(cmd),
+                parar: () => pararTodo(),
+                activarVoz: () => controlIA?.activar('voz'),
+                alSalir: () => ui.showFeedback('Saliste de VR celular', 'info', 2000)
+            });
+            ui.vrCelular = vrCelular;
+            configurarVRCelular(vrCelularDisponible);
 
             vrManager = new VRManager(scene3d, {
                 onPressCommand: (normCmd, isInstant = false) => callbacksBotones.onPress(normCmd, isInstant),
@@ -259,7 +274,11 @@ function configurarControlIA() {
         accesorio: (cmd) => accionAccesorio(cmd),
         parar: () => pararTodo(),
         cancelarDemo: () => cancelarDemo(),
-        estado: (texto) => { if (estadoEl) estadoEl.textContent = texto; },
+        estado: (texto) => {
+            if (estadoEl) estadoEl.textContent = texto;
+            vrCelular?.mostrarEstado(texto);
+        },
+        interceptar: (texto) => vrCelular?.comandoVoz(texto) || false,
         feedback: (msg, tipo, dur) => ui.showFeedback(msg, tipo, dur),
         cambioEstado: (modo, activo) => marcar(modo, activo),
         // Frases complejas de la voz ("haz un cuadrado y luego enciende la luz") van al asistente
@@ -406,6 +425,13 @@ function configurarControlIA() {
 
     const abrirAsistente = configurarAsistente(acciones, modos);
 
+    controlIA = {
+        // Activa un modo si no está activo (lo usa VR celular para encender la voz)
+        activar: (modo) => {
+            if (modos[modo] && !modos[modo].activo && modos[modo].ctrl.soportado !== false) alternar(modo);
+        }
+    };
+
     // Al ocultar la página se apagan cámara, micrófono y giroscopio (y el vehículo se detiene)
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) return;
@@ -416,6 +442,27 @@ function configurarControlIA() {
             }
         });
     });
+}
+
+// --- VR CELULAR (Cardboard) --------------------------------------------------------
+
+async function configurarVRCelular(disponible) {
+    const btn = document.getElementById('btn-vr-celular');
+    const intro = document.getElementById('vrc-intro');
+    if (!btn || !(await disponible())) return;
+    btn.classList.remove('d-none');
+
+    btn.addEventListener('click', () => {
+        ui.playSound('tap');
+        intro.classList.remove('d-none');
+    });
+    document.getElementById('vrc-cancelar').addEventListener('click', () => intro.classList.add('d-none'));
+    document.getElementById('vrc-comenzar').addEventListener('click', async () => {
+        intro.classList.add('d-none');
+        ui.playSound('start');
+        await vrCelular.entrar();
+    });
+    document.getElementById('vrc-salir').addEventListener('click', () => vrCelular.salir());
 }
 
 // --- ASISTENTE IA CONVERSACIONAL ---------------------------------------------------

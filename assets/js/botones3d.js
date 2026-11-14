@@ -308,7 +308,7 @@ export class Consola3D {
 
     _actualizar(dt = 0.016) {
         // En VR se usan los paneles flotantes; la consola se oculta
-        this.grupo.visible = !this.s.renderer.xr.isPresenting;
+        this.grupo.visible = !this.s.renderer.xr.isPresenting && !this.s.modoExterno;
         if (!this.grupo.visible) return;
 
         const d = this.s.desplazamiento;

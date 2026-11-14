@@ -65,6 +65,8 @@ export class Scene3DManager {
         this.wheels = [];
         this.vrHooks = [];
         this.obstaculos = []; // Zonas que el vehículo no puede atravesar ({ x, z, r })
+        this.modoExterno = false;  // true mientras otro modo (VR celular) controla la cámara
+        this.renderizador = null;  // función de render alternativa (pantalla dividida)
 
         // Seguimiento de cámara: cada vez que el vehículo avanza o gira, la vista se recentra
         // (con el mismo ángulo inicial) para no perder la excavadora ni la consola de controles.
@@ -468,23 +470,24 @@ export class Scene3DManager {
             if (this.velocidad < 0.01 || this.motionState.drive === 0) this.velocidad = 0;
 
             this.desplazamiento.copy(this.vehicleGroup.position).sub(this.posInicialVehiculo);
-            this._seguirVehiculo(dt);
+            if (!this.modoExterno) this._seguirVehiculo(dt);
         }
 
         for (const hook of this.vrHooks) {
             hook(dt);
         }
 
-        if (!this.renderer.xr.isPresenting) {
+        if (!this.renderer.xr.isPresenting && !this.modoExterno) {
             this.controls.update();
         }
 
-        this.renderer.render(this.scene, this.camera);
+        if (this.renderizador && !this.renderer.xr.isPresenting) this.renderizador();
+        else this.renderer.render(this.scene, this.camera);
     }
 
     _bindResize() {
         const onResize = () => {
-            if (this.renderer.xr.isPresenting) return;
+            if (this.renderer.xr.isPresenting || this.modoExterno) return;
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this._ajustarEncuadre();
             this.camera.updateProjectionMatrix();

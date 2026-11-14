@@ -23,7 +23,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <link rel="stylesheet" href="assets/css/styles.css?v=22">
+    <link rel="stylesheet" href="assets/css/styles.css?v=23">
 
     <!-- Import Map nativo para Three.js y WebXR sin necesidad de compilación -->
     <script type="importmap">
@@ -84,6 +84,10 @@
 
             <button type="button" id="btn-asistente" class="btn-header-pill btn-asistente" title="Asistente IA conversacional" aria-expanded="false" aria-controls="asistente">
                 <i class="bi bi-chat-dots-fill"></i> <span>Asistente IA</span>
+            </button>
+
+            <button type="button" id="btn-vr-celular" class="btn-header-pill btn-vr-celular d-none" title="VR con el celular y un visor tipo Cardboard">
+                <i class="bi bi-phone-landscape"></i> <span>VR celular</span>
             </button>
 
             <button type="button" id="btn-vr" class="btn-header-pill btn-vr" title="Activar gafas de Realidad Virtual (WebXR)">
@@ -322,6 +326,26 @@
 
     </main>
 
+    <!-- ================= VR CELULAR (Cardboard) ================= -->
+    <button type="button" id="vrc-salir" class="vrc-salir" aria-label="Salir de VR celular"><i class="bi bi-x-lg"></i></button>
+    <div id="vrc-intro" class="vrc-intro d-none" role="dialog" aria-label="Instrucciones VR celular">
+        <div class="vrc-intro-caja">
+            <i class="bi bi-headset-vr"></i>
+            <h2>VR celular</h2>
+            <ol>
+                <li>Pon el celular <b>en horizontal</b> dentro de tu visor (tipo Cardboard).</li>
+                <li>Mueve la cabeza para mirar alrededor. Abajo tienes el <b>tablero de botones</b>.</li>
+                <li>Mira un botón <b>1.6 s</b> para activarlo (o toca la pantalla para activarlo al instante).</li>
+                <li>Los movimientos duran 2.5 s; mira <b>STOP</b> para detener antes.</li>
+                <li>También puedes hablar: "avanza", "gira a la derecha", "alto", "centrar", "salir".</li>
+            </ol>
+            <div class="vrc-intro-botones">
+                <button type="button" class="vrc-cancelar" id="vrc-cancelar">Cancelar</button>
+                <button type="button" class="vrc-comenzar" id="vrc-comenzar">Comenzar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= ASISTENTE IA CONVERSACIONAL ================= -->
     <aside id="asistente" class="asistente d-none" aria-label="Asistente IA">
         <header class="asis-cab">
@@ -376,6 +400,6 @@
         Desarrollado por Cynthia Martínez García &middot; 2026 &middot; Control y Monitoreo IoT 3D / WebXR
     </footer>
 
-    <script type="module" src="assets/js/app.js?v=22"></script>
+    <script type="module" src="assets/js/app.js?v=23"></script>
 </body>
 </html>

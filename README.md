@@ -134,6 +134,18 @@ El botón **Asistente IA** de la barra superior abre un chat donde le pides cosa
 - El **botón lateral (grip)** de cualquier mando es el **paro de emergencia**.
 - Al salir de VR el vehículo se detiene automáticamente.
 
+### VR celular (tipo Cardboard)
+Para usar realidad virtual **con el celular y un visor barato** (Google Cardboard o similar). Funciona en Android y iPhone.
+
+- El botón **VR celular** solo aparece en celulares **sin WebXR**, así que **no aparece en las gafas Meta Quest**, que siguen usando el Modo VR normal. Para probarlo en otro dispositivo se puede abrir la página con `?vrcelular=1`.
+- Al pulsarlo se muestran las instrucciones. Con **Comenzar**, la página pasa a pantalla completa en horizontal y divide la imagen en dos, una para cada ojo.
+- **La vista sigue tu cabeza** gracias al giroscopio del celular. La dirección en que miras al comenzar queda "de frente a la excavadora" (**CENTRAR** la recalibra). Sin giroscopio, la vista se mueve arrastrando el dedo.
+- **Tablero de botones** abajo, frente a ti: Movimiento (izquierda), Brazo y motores (derecha), Turbo / Sonido / Luz, **STOP**, **CENTRAR** y **SALIR**, además de la velocidad actual.
+  - Mirar un botón **1.6 s** lo activa (se llena un anillo verde alrededor del punto de mira). Tocar la pantalla o el botón del visor lo activa al instante.
+  - Los movimientos duran **2.5 s**. Mira **STOP** para detener antes.
+- Se activa sola la **voz**: "avanza", "gira a la derecha", "alto", "haz un cuadrado"… y además **"centrar"** y **"salir"**.
+- El usuario acompaña a la excavadora cuando se mueve, así nunca la pierde de vista. Para salir: botón **✕** arriba, mirar **SALIR**, decir "salir" o el botón Atrás del celular.
+
 ### Robustez
 - **Modo simulación**: la interfaz funciona de inmediato y reintenta conectar con AWS cada 8 s.
 - **Reconexión automática del WebSocket**: cada 3 s los primeros 5 intentos y después cada 15 s.
@@ -180,6 +192,7 @@ vehiculo-iot-vr/
 │   │   ├── control-ia.js      # Control con IA: voz, gestos (MediaPipe) y giroscopio
 │   │   ├── asistente-ia.js    # Asistente conversacional: intérprete local + API de Claude
 │   │   ├── vr-controls.js     # Sesión WebXR, mandos y paneles flotantes
+│   │   ├── vr-celular.js      # VR celular tipo Cardboard (pantalla dividida + giroscopio + mirada)
 │   │   └── joystick.js        # (Versión anterior, ya no se usa)
 │   ├── icons/                 # Íconos de la app instalable
 │   ├── data/

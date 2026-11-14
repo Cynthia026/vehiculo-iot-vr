@@ -1483,3 +1483,50 @@ button:focus-visible, select:focus-visible {
     .asistente { right: .5rem; left: .5rem; bottom: .5rem; width: auto; height: min(70dvh, 560px); }
     .btn-asistente span { display: none; }
 }
+
+
+/* =====================================================================
+   VR CELULAR (Cardboard)
+   ===================================================================== */
+.btn-vr-celular { color: #ffb43a !important; border-color: rgba(255, 180, 58, .5) !important; }
+
+body.vr-celular .app-header,
+body.vr-celular .app-main,
+body.vr-celular .app-footer,
+body.vr-celular .asistente,
+body.vr-celular #action-feedback { display: none !important; }
+body.vr-celular #three-canvas { touch-action: none; }
+
+.vrc-salir {
+    display: none;
+    position: fixed; top: max(.5rem, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+    z-index: 80; width: 40px; height: 40px; border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, .35); background: rgba(10, 16, 34, .6); color: #fff;
+}
+body.vr-celular .vrc-salir { display: grid; place-items: center; }
+/* Línea divisoria entre los dos ojos */
+body.vr-celular::after {
+    content: ''; position: fixed; top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-1px);
+    background: #000; z-index: 70; pointer-events: none;
+}
+
+.vrc-intro {
+    position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 1rem;
+    background: rgba(3, 6, 14, .82); backdrop-filter: blur(6px);
+}
+.vrc-intro.d-none { display: none !important; }
+.vrc-intro-caja {
+    width: min(460px, 100%); max-height: 100%; overflow-y: auto;
+    background: #0e1730; border: 1px solid rgba(255, 180, 58, .45); border-radius: 20px;
+    padding: 1.2rem 1.3rem; color: #e3e8f6; text-align: center;
+}
+.vrc-intro-caja > i { font-size: 2.4rem; color: #ffb43a; }
+.vrc-intro-caja h2 { font-size: 1.25rem; margin: .3rem 0 .7rem; }
+.vrc-intro-caja ol { text-align: left; font-size: .85rem; line-height: 1.45; padding-left: 1.2rem; margin-bottom: 1rem; }
+.vrc-intro-botones { display: flex; gap: .6rem; justify-content: center; }
+.vrc-comenzar, .vrc-cancelar { border-radius: 12px; padding: .6rem 1.2rem; font-weight: 700; border: 1px solid transparent; }
+.vrc-comenzar { background: #ffb43a; color: #0a1020; }
+.vrc-cancelar { background: transparent; color: #9aa6c4; border-color: rgba(255, 255, 255, .2); }
+@media (max-width: 767px) {
+    .btn-vr-celular span { display: none; }
+}
