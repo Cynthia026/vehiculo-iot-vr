@@ -28,31 +28,37 @@ Aplicación web para **controlar y monitorear en tiempo real una excavadora IoT*
   | `Q` / `E` | Motor izquierda / derecha |
   | `Espacio` | Detener |
 
-### Monitoreo (Práctica 4.2)
-- Tarjeta con el **último movimiento** registrado en Amazon RDS (fecha y hora locales).
-- Tabla con los **últimos 10 movimientos**, que se actualiza en tiempo real por WebSocket.
-- Indicadores de estado de **WSS**, **AWS (API REST)** y **RDS (base de datos)**.
+### Velocímetro
+- En el panel de Movimiento se muestra la **velocidad actual del vehículo en km/h**, con una barra de nivel.
+- Indica el modo (**Normal** o **Turbo**, que se activa con el botón Velocidad) y el estado: *Avanzando*, *Retrocediendo*, *Girando* o *Detenido*.
+- Si el vehículo llega al borde de la plataforma, marca **Bloqueado (borde)** y la velocidad baja a 0.
+- El panel VR también muestra la velocidad.
+
+### Indicadores de conexión
+- Estado de **WSS**, **AWS (API REST)** y **RDS (base de datos)** en la barra superior.
+- La vista de Monitoreo está oculta en esta versión. Su código sigue en el proyecto por si se quiere volver a activar.
 
 ### Consola de botones 3D
 - Frente a la excavadora hay una **consola física en 3D** con los mismos controles: cruz de Brazo y motores, cruz de Movimiento, tres botones de accesorios y un botón rojo **STOP**.
 - Se usa con el mouse o con el dedo. Los botones se hunden y se iluminan al presionarlos, y la Luz y la Velocidad se quedan encendidas mientras estén activas.
 - La consola también refleja lo que haces con los botones de la página, el teclado o las demos.
 - Al arrastrar fuera de la consola, la cámara sigue rotando como siempre.
+- La consola **se desplaza junto con el vehículo**, siempre delante de él, para que nunca se pierda de la pantalla.
 
 ### Modo simulación
 - Si AWS no responde, aparece el indicador **Modo simulación** y **todos los botones siguen funcionando**: mueven el gemelo 3D, pero no se envía nada al vehículo real.
-- Monitoreo muestra un historial local con los últimos 10 movimientos simulados.
 - Incluye tres demos locales: *Recorrido cuadrado*, *Excavación* y *Exhibición*.
 - En cuanto AWS responde, la app cambia sola al control real.
 
 ### Gemelo digital 3D
 - Escena espacial con plataforma iluminada y un modelo articulado de la excavadora: orugas, torreta giratoria, brazo hidráulico, faros y onda de sonido.
 - El modelo **reacciona a los comandos** que se envían y a los eventos en vivo del WebSocket, incluidas las demos.
-- Cámara orbital: arrastra el fondo para rotar y usa la rueda del mouse para hacer zoom. El botón **Centrar 3D** regresa la vista inicial.
+- **La cámara sigue al vehículo**: cada vez que avanza, retrocede o gira, la vista se recentra suavemente. Así la excavadora y la consola de controles 3D (que se desplaza junto con ella) nunca se salen de la pantalla.
+- Con el vehículo quieto puedes rotar la cámara libremente arrastrando el fondo y hacer zoom con la rueda del mouse. El botón **Centrar 3D** regresa la vista inicial.
 
 ### Modo VR (WebXR)
 - Botón **Modo VR** para entrar a la sesión inmersiva desde el navegador de las gafas.
-- **Dos paneles flotantes**: Control (izquierda) y Monitoreo (derecha).
+- **Panel flotante de Control** con todos los botones y la velocidad actual.
 - **Puntero láser** en ambos mandos. Mantén el **gatillo** sobre un botón de movimiento para mover el vehículo; al soltarlo se envía DETENER.
 - El **botón lateral (grip)** de cualquier mando es el **paro de emergencia**.
 - Al salir de VR el vehículo se detiene automáticamente.
@@ -83,7 +89,7 @@ Three.js se carga con un **import map** desde jsDelivr, así que el proyecto fun
 
 ```
 vehiculo-iot-vr/
-├── index.html                 # Página principal (vistas Control y Monitoreo)
+├── index.html                 # Página principal (vista de Control)
 ├── assets/
 │   ├── css/
 │   │   └── styles.css         # Estilos, distribución de paneles y diseño adaptable

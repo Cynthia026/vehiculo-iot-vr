@@ -1,8 +1,8 @@
 // assets/js/app.js
-import { api } from './api.js?v=15';
-import { wsManager } from './websocket.js?v=15';
-import { ui, normalizar } from './ui.js?v=15';
-import { CONFIG } from './config.js?v=15';
+import { api } from './api.js?v=16';
+import { wsManager } from './websocket.js?v=16';
+import { ui, normalizar } from './ui.js?v=16';
+import { CONFIG } from './config.js?v=16';
 
 let catalogoComandos = [];
 let idComandoDetener = null;
@@ -82,9 +82,9 @@ async function inicializar() {
         let vrManager = null;
         let consola3d = null;
         try {
-            const { Scene3DManager } = await import('./scene3d.js?v=15');
-            const { VRManager } = await import('./vr-controls.js?v=15');
-            const { Consola3D } = await import('./botones3d.js?v=15');
+            const { Scene3DManager } = await import('./scene3d.js?v=16');
+            const { VRManager } = await import('./vr-controls.js?v=16');
+            const { Consola3D } = await import('./botones3d.js?v=16');
             scene3d = new Scene3DManager('three-canvas');
 
             const callbacksBotones = {
@@ -114,6 +114,24 @@ async function inicializar() {
         }
 
         ui.attach3DAndVR(scene3d, vrManager, consola3d);
+
+        // Velocímetro (se actualiza ~10 veces por segundo con la velocidad real del gemelo 3D)
+        if (scene3d) {
+            let acumulado = 0;
+            scene3d.registerVRUpdate((dt) => {
+                acumulado += dt;
+                if (acumulado < 0.1) return;
+                acumulado = 0;
+                const ms = scene3d.motionState;
+                const kmh = scene3d.getVelocidadKmh();
+                let estado = 'Detenido';
+                if (ms.drive > 0) estado = kmh > 0.05 ? 'Avanzando' : 'Bloqueado (borde)';
+                else if (ms.drive < 0) estado = kmh > 0.05 ? 'Retrocediendo' : 'Bloqueado (borde)';
+                else if (ms.turn > 0) estado = 'Girando a la izquierda';
+                else if (ms.turn < 0) estado = 'Girando a la derecha';
+                ui.actualizarVelocimetro(kmh, scene3d.getVelocidadMaxKmh(), ms.highSpeed, estado);
+            });
+        }
 
         // 2. Mostrar la interfaz de inmediato en MODO SIMULACIÓN hasta que AWS responda
         activarSimulacion();

@@ -17,7 +17,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <link rel="stylesheet" href="assets/css/styles.css?v=15">
+    <link rel="stylesheet" href="assets/css/styles.css?v=16">
 
     <!-- Import Map nativo para Three.js y WebXR sin necesidad de compilación -->
     <script type="importmap">
@@ -62,7 +62,7 @@
         </div>
 
         <!-- Navegación de vistas: Control / Monitoreo -->
-        <nav class="app-tabs" id="appTabs" aria-label="Navegación de vistas">
+        <nav class="app-tabs d-none" id="appTabs" aria-label="Navegación de vistas" hidden>
             <button type="button" class="app-tab active" id="btn-tab-control">
                 <i class="bi bi-controller"></i> Control
             </button>
@@ -169,6 +169,16 @@
                         <span>Retroceder</span>
                     </button>
                 </div>
+                <!-- Velocímetro del vehículo (velocidad real del gemelo 3D) -->
+                <div class="velocimetro" id="velocimetro" aria-live="off">
+                    <div class="velo-top">
+                        <span class="velo-cab"><i class="bi bi-speedometer2"></i> Velocidad</span>
+                        <span class="velo-modo" id="velo-modo">Normal</span>
+                    </div>
+                    <div class="velo-valor"><span id="velo-num">0.0</span><small>km/h</small></div>
+                    <div class="velo-barra"><div class="velo-fill" id="velo-fill"></div></div>
+                    <div class="velo-estado" id="velo-estado">Detenido</div>
+                </div>
                 <button id="btn-stop" class="btn-stop" disabled>
                     <i class="bi bi-sign-stop-fill"></i> Detener
                 </button>
@@ -254,6 +264,6 @@
         Desarrollado por Cynthia Martínez García &middot; 2026 &middot; Control y Monitoreo IoT 3D / WebXR
     </footer>
 
-    <script type="module" src="assets/js/app.js?v=15"></script>
+    <script type="module" src="assets/js/app.js?v=16"></script>
 </body>
 </html>

@@ -1138,3 +1138,61 @@ button:focus-visible, select:focus-visible {
     animation: sim-pulso 2.4s ease-in-out infinite;
 }
 @keyframes sim-pulso { 50% { box-shadow: 0 0 12px rgba(150, 110, 255, .45); } }
+
+
+/* =====================================================================
+   VELOCÍMETRO (panel de Movimiento)
+   ===================================================================== */
+.app-tabs[hidden] { display: none !important; }
+
+.velocimetro {
+    width: 100%;
+    padding: .55rem .7rem .6rem;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(61, 220, 151, .08), rgba(10, 16, 32, .6));
+    border: 1px solid rgba(61, 220, 151, .28);
+    box-shadow: inset 0 3px 10px rgba(0, 0, 0, .45);
+    transition: border-color .2s, background .2s;
+}
+.velocimetro.turbo {
+    background: linear-gradient(180deg, rgba(255, 180, 58, .12), rgba(10, 16, 32, .6));
+    border-color: rgba(255, 180, 58, .45);
+}
+.velo-top { display: flex; justify-content: space-between; align-items: center; gap: .4rem; }
+.velo-cab { font-size: .72rem; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+.velo-cab i { color: var(--ok); }
+.velocimetro.turbo .velo-cab i { color: var(--warn); }
+.velo-modo {
+    font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    padding: .12rem .45rem; border-radius: 999px;
+    color: var(--ok); background: rgba(61, 220, 151, .14); border: 1px solid rgba(61, 220, 151, .4);
+}
+.velocimetro.turbo .velo-modo { color: var(--warn); background: rgba(255, 180, 58, .16); border-color: rgba(255, 180, 58, .5); }
+.velo-valor {
+    display: flex; align-items: baseline; gap: .3rem; margin: .15rem 0 .3rem;
+    font-variant-numeric: tabular-nums; line-height: 1;
+}
+.velo-valor span { font-size: 1.9rem; font-weight: 800; color: #eef1f8; }
+.velo-valor small { font-size: .75rem; color: var(--muted); font-weight: 600; }
+.velocimetro.en-marcha .velo-valor span { color: var(--ok); text-shadow: 0 0 14px rgba(61, 220, 151, .45); }
+.velocimetro.turbo.en-marcha .velo-valor span { color: var(--warn); text-shadow: 0 0 14px rgba(255, 180, 58, .5); }
+.velo-barra { height: 7px; border-radius: 999px; background: rgba(255, 255, 255, .07); overflow: hidden; }
+.velo-fill {
+    height: 100%; width: 0%; border-radius: inherit;
+    background: linear-gradient(90deg, #3ddc97, #5cc8ff);
+    transition: width .15s linear;
+}
+.velocimetro.turbo .velo-fill { background: linear-gradient(90deg, #ffb43a, #ff5d6c); }
+.velo-estado { margin-top: .3rem; font-size: .68rem; color: var(--muted); }
+
+@media (max-width: 767px) {
+    .velocimetro { padding: .4rem .5rem; }
+    .velo-valor span { font-size: 1.35rem; }
+    .velo-estado { display: none; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+    .velocimetro { padding: .25rem .4rem; }
+    .velo-valor { margin: 0; }
+    .velo-valor span { font-size: 1rem; }
+    .velo-barra, .velo-estado, .velo-cab { display: none; }
+}

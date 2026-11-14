@@ -43,6 +43,10 @@ export class Scene3DManager {
         this.controls.minDistance = 1.6;
         this.controls.maxDistance = 9.5;
         this.controls.maxPolarAngle = Math.PI * 0.48;
+        // Si el usuario rota la cámara con el vehículo quieto, se respeta su vista
+        this.controls.addEventListener('start', () => {
+            if (this.motionState.drive === 0 && this.motionState.turn === 0) this._recentrar = false;
+        });
 
         // Estado cinemático del gemelo digital
         this.motionState = {
@@ -62,6 +66,15 @@ export class Scene3DManager {
         this.vrHooks = [];
         this.obstaculos = []; // Zonas que el vehículo no puede atravesar ({ x, z, r })
 
+        // Seguimiento de cámara: cada vez que el vehículo avanza o gira, la vista se recentra
+        // (con el mismo ángulo inicial) para no perder la excavadora ni la consola de controles.
+        this.desplazamiento = new THREE.Vector3();  // Cuánto se ha movido el vehículo desde su posición inicial
+        this._recentrar = false;
+        this._prevPos = new THREE.Vector3();
+        this.velocidad = 0;          // m/s (suavizada)
+        this.VELOCIDAD_BASE = 1.35;  // m/s en modo normal
+        this.FACTOR_TURBO = 1.85;
+
         this._initLights();
         this._initSpaceEnvironment();
         this._initArenaPlatform();
@@ -77,9 +90,36 @@ export class Scene3DManager {
 
     resetCamera() {
         if (this.renderer.xr.isPresenting) return;
-        this.camera.position.copy(this._camPosParaPantalla());
-        this.controls.target.copy(this.defaultTarget);
+        this._recentrar = false;
+        this.camera.position.copy(this._camPosParaPantalla()).add(this.desplazamiento);
+        this.controls.target.copy(this.defaultTarget).add(this.desplazamiento);
         this.controls.update();
+    }
+
+    // Velocidad lineal actual del vehículo en km/h y la máxima posible en el modo actual
+    getVelocidadKmh() {
+        return this.velocidad * 3.6;
+    }
+    getVelocidadMaxKmh() {
+        return this.VELOCIDAD_BASE * this.FACTOR_TURBO * 3.6;
+    }
+
+    // Lleva la cámara suavemente a la vista inicial, desplazada hasta donde está el vehículo
+    _seguirVehiculo(dt) {
+        const ms = this.motionState;
+        const enMovimiento = ms.drive !== 0 || ms.turn !== 0;
+        if (enMovimiento) this._recentrar = true;
+        if (!this._recentrar || this.renderer.xr.isPresenting) return;
+
+        const k = 1 - Math.exp(-dt * 4.5);
+        const objetivo = this.defaultTarget.clone().add(this.desplazamiento);
+        const posCam = this._camPosParaPantalla().add(this.desplazamiento);
+        this.controls.target.lerp(objetivo, k);
+        this.camera.position.lerp(posCam, k);
+
+        if (!enMovimiento && this.camera.position.distanceTo(posCam) < 0.01 && this.controls.target.distanceTo(objetivo) < 0.01) {
+            this._recentrar = false;
+        }
     }
 
     // En celular vertical los controles ocupan la parte alta: se baja el modelo al espacio libre
@@ -190,6 +230,7 @@ export class Scene3DManager {
     _initExcavatorModel() {
         this.vehicleGroup = new THREE.Group();
         this.vehicleGroup.position.set(0, 0, -0.4);
+        this.posInicialVehiculo = this.vehicleGroup.position.clone();
         this.scene.add(this.vehicleGroup);
 
         const darkMetal = new THREE.MeshStandardMaterial({ color: 0x1a233a, metalness: 0.7, roughness: 0.3 });
@@ -346,13 +387,15 @@ export class Scene3DManager {
 
     _animate() {
         const dt = Math.min(this.clock.getDelta(), 0.05);
-        const speedMult = this.motionState.highSpeed ? 1.85 : 1.0;
+        const speedMult = this.motionState.highSpeed ? this.FACTOR_TURBO : 1.0;
 
         if (this.starField) {
             this.starField.rotation.y += dt * 0.015;
         }
 
         if (this.vehicleGroup) {
+            this._prevPos.copy(this.vehicleGroup.position);
+
             // Giro del chasis
             if (this.motionState.turn !== 0) {
                 this.vehicleGroup.rotation.y += this.motionState.turn * dt * 1.55 * speedMult;
@@ -366,7 +409,7 @@ export class Scene3DManager {
                 );
                 const nextPos = this.vehicleGroup.position.clone().addScaledVector(
                     forward,
-                    this.motionState.drive * dt * 1.35 * speedMult
+                    this.motionState.drive * dt * this.VELOCIDAD_BASE * speedMult
                 );
                 const distFromCenter = Math.hypot(nextPos.x, nextPos.z + 0.4);
                 const choca = this.obstaculos.some((o) => Math.hypot(nextPos.x - o.x, nextPos.z - o.z) < o.r);
@@ -406,6 +449,16 @@ export class Scene3DManager {
                 this.soundRing.scale.set(scale, scale, 1);
                 this.soundMat.opacity = this.motionState.soundPulse * 0.85;
             }
+        }
+
+        if (this.vehicleGroup) {
+            // Velocidad real (si choca con el borde de la plataforma, es 0)
+            const v = dt > 0 ? this.vehicleGroup.position.distanceTo(this._prevPos) / dt : 0;
+            this.velocidad += (v - this.velocidad) * Math.min(1, dt * 8);
+            if (this.velocidad < 0.01 || this.motionState.drive === 0) this.velocidad = 0;
+
+            this.desplazamiento.copy(this.vehicleGroup.position).sub(this.posInicialVehiculo);
+            this._seguirVehiculo(dt);
         }
 
         for (const hook of this.vrHooks) {

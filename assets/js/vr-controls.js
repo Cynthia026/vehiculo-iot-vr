@@ -197,8 +197,9 @@ export class VRManager {
         monitorMesh.position.set(1.38, 1.32, 0.72);
         monitorMesh.rotation.y = -0.44;
         monitorMesh.userData.panelType = 'monitor';
-        this.vrGroup.add(monitorMesh);
-        this.interactiveMeshes.push(monitorMesh);
+        // Panel de monitoreo oculto (no se muestra ni recibe clics)
+        monitorMesh.visible = false;
+        this.monitorMesh = monitorMesh;
 
         this._redrawControlCanvas();
         this._redrawMonitorCanvas();
@@ -208,8 +209,17 @@ export class VRManager {
         Object.assign(this.state, partial);
         if (this.vrGroup.visible) {
             this._redrawControlCanvas();
-            this._redrawMonitorCanvas();
         }
+    }
+
+    // Velocidad mostrada en el panel VR (solo se redibuja si cambia el texto)
+    actualizarVelocidad(kmh, turbo, estado) {
+        const texto = `${kmh.toFixed(1)} km/h · ${turbo ? 'TURBO' : 'Normal'} · ${estado}`;
+        if (texto === this._velocidadTexto) return;
+        this._velocidadTexto = texto;
+        this.state.velocidadTexto = texto;
+        this.state.velocidadTurbo = turbo;
+        if (this.vrGroup.visible) this._redrawControlCanvas();
     }
 
     _drawRoundRect(ctx, x, y, w, h, r, fill, stroke) {
@@ -238,11 +248,17 @@ export class VRManager {
         ctx.fillStyle = '#eef1f8';
         ctx.font = 'bold 34px sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText('4.1 CONTROL EXCAVADORA IOT (VR)', 42, 64);
+        ctx.fillText('CONTROL IOT · VR', 42, 64);
 
         ctx.fillStyle = '#9aa6c4';
         ctx.font = '22px sans-serif';
         ctx.fillText('Mantén gatillo para mover · Botón lateral (Grip) = DETENER', 42, 98);
+
+        // Velocidad actual
+        ctx.fillStyle = this.state.velocidadTurbo ? '#ffb43a' : '#3ddc97';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(`⏱ ${this.state.velocidadTexto || '0.0 km/h · Normal · Detenido'}`, W - 42, 64);
 
         const addButton = (id, label, x, y, w, h, rgb, hold = false, action = null) => {
             const active = this.state.activeCmd === id;

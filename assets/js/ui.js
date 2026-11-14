@@ -47,6 +47,30 @@ class UIController {
         this.initSplashScreen();
     }
 
+    // Velocímetro: km/h actuales, máximo posible, modo turbo y estado del movimiento
+    actualizarVelocimetro(kmh, maxKmh, turbo, estado) {
+        if (!this._velo) {
+            this._velo = {
+                num: document.getElementById('velo-num'),
+                fill: document.getElementById('velo-fill'),
+                modo: document.getElementById('velo-modo'),
+                estado: document.getElementById('velo-estado'),
+                caja: document.getElementById('velocimetro')
+            };
+        }
+        const v = this._velo;
+        if (!v.num) return;
+        const texto = kmh.toFixed(1);
+        if (v.num.textContent !== texto) v.num.textContent = texto;
+        v.fill.style.width = `${Math.min(100, (kmh / maxKmh) * 100)}%`;
+        const modo = turbo ? 'Turbo' : 'Normal';
+        if (v.modo.textContent !== modo) v.modo.textContent = modo;
+        v.caja.classList.toggle('turbo', turbo);
+        v.caja.classList.toggle('en-marcha', kmh > 0.05);
+        if (v.estado.textContent !== estado) v.estado.textContent = estado;
+        this.vrManager?.actualizarVelocidad?.(kmh, turbo, estado);
+    }
+
     attach3DAndVR(scene3d, vrManager, consola3d = null) {
         this.scene3d = scene3d;
         this.vrManager = vrManager;

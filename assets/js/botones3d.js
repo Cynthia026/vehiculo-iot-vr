@@ -50,11 +50,11 @@ export class Consola3D {
         this.hover = null;
         this.activo = null;       // comando activo (botones web, teclado, demos)
 
+        this.posicionBase = { ...posicion };
         this._construir(posicion);
         this._eventos();
 
-        // El vehículo no atraviesa la consola
-        this.s.obstaculos?.push({ x: posicion.x, z: posicion.z, r: 1.35 });
+        // La consola acompaña al vehículo (sin girar con él) para que siempre quede en pantalla
         this.s.registerVRUpdate((dt) => this._actualizar(dt));
     }
 
@@ -76,11 +76,20 @@ export class Consola3D {
         const metal = new THREE.MeshStandardMaterial({ color: 0x141c33, metalness: 0.7, roughness: 0.35 });
         const neon = new THREE.MeshStandardMaterial({ color: CIAN, emissive: 0x1e6fa8, emissiveIntensity: 1.1 });
 
-        // Pedestal
-        const pie = new THREE.Mesh(new RoundedBoxGeometry(1.3, 0.52, 0.42, 3, 0.05), metal);
-        pie.position.set(0, 0.26, -0.05);
-        pie.castShadow = true;
-        g.add(pie);
+        // Base holográfica flotante (la consola se desplaza junto con el vehículo)
+        const halo = new THREE.Mesh(
+            new THREE.RingGeometry(0.55, 0.95, 48),
+            new THREE.MeshBasicMaterial({ color: CIAN, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false })
+        );
+        halo.rotation.x = -Math.PI / 2;
+        halo.position.y = 0.02;
+        g.add(halo);
+        const haz = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.5, 0.75, 0.55, 32, 1, true),
+            new THREE.MeshBasicMaterial({ color: CIAN, transparent: true, opacity: 0.07, side: THREE.DoubleSide, depthWrite: false })
+        );
+        haz.position.y = 0.3;
+        g.add(haz);
 
         // Tablero inclinado hacia el usuario
         const mesa = (this.mesa = new THREE.Group());
@@ -301,6 +310,9 @@ export class Consola3D {
         // En VR se usan los paneles flotantes; la consola se oculta
         this.grupo.visible = !this.s.renderer.xr.isPresenting;
         if (!this.grupo.visible) return;
+
+        const d = this.s.desplazamiento;
+        if (d) this.grupo.position.set(this.posicionBase.x + d.x, 0, this.posicionBase.z + d.z);
 
         const ms = this.s.motionState;
         for (const b of this.botones) {
