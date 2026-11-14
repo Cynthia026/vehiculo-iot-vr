@@ -29,7 +29,7 @@ Aplicación web para **controlar y monitorear en tiempo real una excavadora IoT*
   | `Espacio` | Detener |
 
 ### Control con IA: voz, gestos y giroscopio
-En el panel **Control con IA** (abajo a la izquierda) se activa cada modo con su botón. El botón **?** muestra la lista de comandos. Los tres modos usan la misma lógica segura que los botones: el vehículo se mueve mientras dura el comando y luego se envía DETENER.
+En el panel **Control con IA** (abajo a la izquierda) se activa cada modo con su botón. **Solo puede haber un método activo a la vez**: al elegir otro, el anterior se apaga (y si estaba cargando, se cancela). El botón **?** muestra la lista de comandos. Los tres modos usan la misma lógica segura que los botones: el vehículo se mueve mientras dura el comando y luego se envía DETENER.
 
 **🎤 Voz** (reconocimiento de voz del navegador, español de México)
 | Frase | Acción |
@@ -63,12 +63,14 @@ Se muestra la imagen de la cámara con los puntos de la mano detectados. Si la m
 - Al activarlo se toma la posición actual como neutra (el botón **Recalibrar** la vuelve a tomar).
 - Tiene dos modos, que se eligen dentro del panel:
 
-  | Inclinación | 🚜 Conducir | 🦾 Brazo y motores |
-  |---|---|---|
-  | Hacia adelante (alejar la parte de arriba) | Avanzar | Bajar brazo |
-  | Hacia ti | Retroceder | Subir brazo |
-  | A la izquierda | Girar izquierda | Motor izquierdo |
-  | A la derecha | Girar derecha | Motor derecho |
+  | Inclinación | 🚜 Conducir | 🦾 Brazo | ✨ Accesorios |
+  |---|---|---|---|
+  | Hacia adelante (alejar la parte de arriba) | Avanzar | Bajar brazo | Turbo (Velocidad) |
+  | Hacia ti | Retroceder | Subir brazo | — |
+  | A la izquierda | Girar izquierda | Motor izquierdo | Luz |
+  | A la derecha | Girar derecha | Motor derecho | Sonido |
+
+- En **Accesorios** cada inclinación activa el accesorio **una sola vez**; para activar otro hay que regresar al centro. Al entrar a este modo ya inclinado, no se activa nada hasta volver al centro.
 
 - Hay que inclinar unos 14° para que reaccione. Al regresar a la posición neutra se detiene. Al cambiar de modo, el movimiento en curso se detiene.
 - Un indicador muestra la inclinación en tiempo real. Funciona mejor con el celular en vertical. En iPhone pide permiso de movimiento.

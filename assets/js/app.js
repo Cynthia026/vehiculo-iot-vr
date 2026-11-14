@@ -1,9 +1,9 @@
 // assets/js/app.js
-import { api } from './api.js?v=18';
-import { wsManager } from './websocket.js?v=18';
-import { ui, normalizar } from './ui.js?v=18';
-import { CONFIG } from './config.js?v=18';
-import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=18';
+import { api } from './api.js?v=19';
+import { wsManager } from './websocket.js?v=19';
+import { ui, normalizar } from './ui.js?v=19';
+import { CONFIG } from './config.js?v=19';
+import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=19';
 
 let catalogoComandos = [];
 let idComandoDetener = null;
@@ -83,9 +83,9 @@ async function inicializar() {
         let vrManager = null;
         let consola3d = null;
         try {
-            const { Scene3DManager } = await import('./scene3d.js?v=18');
-            const { VRManager } = await import('./vr-controls.js?v=18');
-            const { Consola3D } = await import('./botones3d.js?v=18');
+            const { Scene3DManager } = await import('./scene3d.js?v=19');
+            const { VRManager } = await import('./vr-controls.js?v=19');
+            const { Consola3D } = await import('./botones3d.js?v=19');
             scene3d = new Scene3DManager('three-canvas');
 
             const callbacksBotones = {
@@ -338,6 +338,16 @@ function configurarControlIA() {
             acciones.estado('Modo desactivado.');
             return;
         }
+        // Solo un método a la vez: se apaga el que estuviera activo (o cargando)
+        Object.entries(modos).forEach(([otro, o]) => {
+            if (otro !== modo && (o.activo || o.btn.classList.contains('cargando'))) {
+                o.cancelado = true;
+                o.ctrl.detener();
+                marcar(otro, false);
+            }
+        });
+
+        m.cancelado = false;
         m.btn.classList.add('cargando');
         if (modo === 'gestos') m.panel.classList.remove('d-none');
         try {
@@ -346,9 +356,10 @@ function configurarControlIA() {
             marcar(modo, true);
             ui.playSound('start');
         } catch (e) {
-            console.error(`Control con IA (${modo}):`, e);
             m.ctrl.detener();
             marcar(modo, false);
+            if (m.cancelado) return; // se eligió otro método mientras este cargaba
+            console.error(`Control con IA (${modo}):`, e);
             const msg = mensajeError(modo, e);
             acciones.estado(`⚠ ${msg}`);
             ui.showFeedback(msg, 'warning', 4000);

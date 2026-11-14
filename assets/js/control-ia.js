@@ -479,7 +479,21 @@ export const MAPA_GIRO = {
         RETROCEDER: 'SUBIR_BRAZO',        // hacia ti = subir (como jalar una palanca)
         GIRAR_IZQUIERDA: 'MOTOR_IZQUIERDA',
         GIRAR_DERECHA: 'MOTOR_DERECHA'
+    },
+    // Accesorios: un toque por inclinación (hay que volver al centro para activar otro)
+    accesorios: {
+        AVANZAR: 'VELOCIDAD',             // adelante = turbo
+        RETROCEDER: null,                 // hacia ti = sin acción
+        GIRAR_IZQUIERDA: 'LUZ',
+        GIRAR_DERECHA: 'SONIDO'
     }
+};
+const MODOS_INSTANTANEOS = new Set(['accesorios']);
+
+const TEXTO_MODO = {
+    conducir: '📱 Modo conducir: inclina adelante/atrás para avanzar/retroceder y a los lados para girar',
+    brazo: '📱 Modo brazo: inclina hacia ti para subir, adelante para bajar y a los lados para los motores',
+    accesorios: '📱 Modo accesorios: inclina adelante = turbo, izquierda = luz, derecha = sonido (regresa al centro entre uno y otro)'
 };
 
 export class ControlGiroscopio {
@@ -495,7 +509,7 @@ export class ControlGiroscopio {
         this._onOri = (e) => this._orientacion(e);
     }
 
-    // Cambia entre 'conducir' y 'brazo'. Si había un movimiento en curso, se detiene.
+    // Cambia entre 'conducir', 'brazo' y 'accesorios'. Si había un movimiento en curso, se detiene.
     setModo(modo) {
         if (!MAPA_GIRO[modo] || modo === this.modo) return;
         this.modo = modo;
@@ -503,12 +517,9 @@ export class ControlGiroscopio {
             this.cmd = null;
             this.a.soltar();
         }
-        this.dir = null;
-        if (this.activo) {
-            this.a.estado(modo === 'brazo'
-                ? '📱 Modo brazo: inclina hacia ti para subir, adelante para bajar y a los lados para los motores'
-                : '📱 Modo conducir: inclina adelante/atrás para avanzar/retroceder y a los lados para girar');
-        }
+        // En accesorios se ignora la inclinación actual hasta volver al centro (evita activar uno sin querer)
+        this.dir = MODOS_INSTANTANEOS.has(modo) ? 'ESPERAR_CENTRO' : null;
+        if (this.activo) this.a.estado(TEXTO_MODO[modo]);
     }
 
     async iniciar() {
@@ -554,9 +565,7 @@ export class ControlGiroscopio {
         if (!this.activo || e.beta === null || e.gamma === null) return;
         if (!this.recibido) {
             this.recibido = true;
-            this.a.estado(this.modo === 'brazo'
-                ? '📱 Modo brazo: inclina hacia ti para subir, adelante para bajar y a los lados para los motores'
-                : '📱 Giroscopio activo: inclina hacia adelante/atrás para avanzar/retroceder y a los lados para girar');
+            this.a.estado(TEXTO_MODO[this.modo]);
         }
 
         // Ejes según la orientación de la pantalla
@@ -580,7 +589,30 @@ export class ControlGiroscopio {
             this.punto.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
         }
 
-        const dir = comandoPorInclinacion(adelante, derecha, this.dir);
+        const previa = this.dir === 'ESPERAR_CENTRO' ? null : this.dir;
+        const dir = comandoPorInclinacion(adelante, derecha, previa);
+
+        // Modo accesorios: un solo toque por inclinación, sin "mantener"
+        if (MODOS_INSTANTANEOS.has(this.modo)) {
+            if (this.dir === 'ESPERAR_CENTRO') {
+                if (dir === null) {
+                    this.dir = null;
+                    this.a.estado('📱 Listo: inclina adelante = turbo, izquierda = luz, derecha = sonido');
+                }
+                return;
+            }
+            if (dir === this.dir) return;
+            this.dir = dir;
+            const acc = dir ? MAPA_GIRO[this.modo][dir] : null;
+            if (acc) {
+                this.a.accesorio(acc);
+                this.a.estado(`📱 Inclinación → ${nombreComando(acc)} (regresa al centro para otro)`);
+            } else if (!dir) {
+                this.a.estado('📱 Centro: listo para otro accesorio');
+            }
+            return;
+        }
+
         if (dir === this.dir) return;
         this.dir = dir;
         const nuevo = dir ? MAPA_GIRO[this.modo][dir] : null;

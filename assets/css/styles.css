@@ -1358,7 +1358,7 @@ button:focus-visible, select:focus-visible {
 
 /* Giroscopio: selector de modo y etiquetas de la mira */
 .ia-giro { flex-direction: column; gap: .5rem; }
-.ia-giro-modos { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; width: 100%; }
+.ia-giro-modos { display: grid; grid-template-columns: repeat(3, 1fr); gap: .35rem; width: 100%; }
 .ia-giro-modo {
     border: 1px solid rgba(61, 220, 151, .35); background: rgba(61, 220, 151, .06); color: #c7d2ec;
     font-size: .72rem; font-weight: 600; border-radius: 10px; padding: .4rem .3rem;
@@ -1382,3 +1382,7 @@ button:focus-visible, select:focus-visible {
     .ia-giro-mira { width: 70px; height: 70px; margin: .6rem 1.5rem; }
     .ia-giro-modo { padding: .3rem .2rem; }
 }
+
+.ia-giro-mira[data-modo="accesorios"] .giro-et::before { content: attr(data-accesorios); }
+.ia-giro-mira[data-modo="accesorios"] { border-color: rgba(255, 180, 58, .55); }
+.ia-giro-mira[data-modo="accesorios"] .giro-et { color: #ffb43a; }
