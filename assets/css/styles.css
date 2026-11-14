@@ -1393,7 +1393,6 @@ button:focus-visible, select:focus-visible {
    ===================================================================== */
 .btn-asistente { color: #c9b6ff !important; border-color: rgba(150, 110, 255, .5) !important; }
 .btn-asistente.activo { background: rgba(150, 110, 255, .25) !important; box-shadow: 0 0 14px rgba(150, 110, 255, .45); }
-.btn-instalar { color: #3ddc97 !important; border-color: rgba(61, 220, 151, .5) !important; }
 
 .asistente {
     position: fixed;
@@ -1482,5 +1481,5 @@ button:focus-visible, select:focus-visible {
 
 @media (max-width: 767px) {
     .asistente { right: .5rem; left: .5rem; bottom: .5rem; width: auto; height: min(70dvh, 560px); }
-    .btn-asistente span, .btn-instalar span { display: none; }
+    .btn-asistente span { display: none; }
 }

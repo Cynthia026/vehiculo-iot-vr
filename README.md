@@ -93,9 +93,9 @@ El botón **Asistente IA** de la barra superior abre un chat donde le pides cosa
 - Con el modo **Voz** activo, las frases complejas ("haz un cuadrado y luego toca el claxon") se envían automáticamente al asistente. El chat también tiene su propio botón de micrófono para dictar.
 
 ### App instalable (PWA)
-- La página se puede **instalar como app** en el celular o la computadora, con su ícono, a pantalla completa y sin barra del navegador.
-  - **Android / Chrome / Edge**: aparece el botón **Instalar app** en la barra superior (o en el menú ⋮ → *Instalar aplicación*).
-  - **iPhone / iPad (Safari)**: Compartir → *Agregar a inicio*. El botón **Instalar app** muestra estas instrucciones.
+- La página no tiene botón de instalar, pero el navegador permite agregarla como app si se desea:
+  - **Android / Chrome / Edge**: menú ⋮ → *Instalar aplicación* o *Agregar a pantalla de inicio*.
+  - **iPhone / iPad (Safari)**: Compartir → *Agregar a inicio*.
 - **Funciona sin conexión** en modo simulación después de la primera visita, gracias al service worker (`sw.js`), que guarda la app y las librerías.
 - La app instalada tiene un atajo directo al **Asistente IA** (mantén presionado el ícono).
 

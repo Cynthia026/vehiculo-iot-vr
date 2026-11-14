@@ -1,10 +1,10 @@
 // assets/js/app.js
-import { api } from './api.js?v=21';
-import { wsManager } from './websocket.js?v=21';
-import { ui, normalizar } from './ui.js?v=21';
-import { CONFIG } from './config.js?v=21';
-import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=21';
-import { AsistenteIA, describirPaso } from './asistente-ia.js?v=21';
+import { api } from './api.js?v=22';
+import { wsManager } from './websocket.js?v=22';
+import { ui, normalizar } from './ui.js?v=22';
+import { CONFIG } from './config.js?v=22';
+import { ControlVoz, ControlGestos, ControlGiroscopio } from './control-ia.js?v=22';
+import { AsistenteIA, describirPaso } from './asistente-ia.js?v=22';
 
 let catalogoComandos = [];
 let idComandoDetener = null;
@@ -85,9 +85,9 @@ async function inicializar() {
         let vrManager = null;
         let consola3d = null;
         try {
-            const { Scene3DManager } = await import('./scene3d.js?v=21');
-            const { VRManager } = await import('./vr-controls.js?v=21');
-            const { Consola3D } = await import('./botones3d.js?v=21');
+            const { Scene3DManager } = await import('./scene3d.js?v=22');
+            const { VRManager } = await import('./vr-controls.js?v=22');
+            const { Consola3D } = await import('./botones3d.js?v=22');
             scene3d = new Scene3DManager('three-canvas');
 
             const callbacksBotones = {
@@ -961,37 +961,6 @@ function configurarPWA() {
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
         navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('Service worker no registrado:', e));
     }
-
-    const btn = document.getElementById('btn-instalar');
-    const instalada = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    if (!btn || instalada) return;
-
-    let aviso = null;
-    // Chrome / Edge / Android: el navegador avisa cuando la app se puede instalar
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        aviso = e;
-        btn.classList.remove('d-none');
-    });
-    window.addEventListener('appinstalled', () => {
-        btn.classList.add('d-none');
-        ui.showFeedback('¡App instalada! Ya la tienes en tu pantalla de inicio.', 'success', 3500);
-    });
-
-    // iPhone / iPad: no hay aviso automático; se explica cómo agregarla
-    const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (esIOS) btn.classList.remove('d-none');
-
-    btn.addEventListener('click', async () => {
-        if (aviso) {
-            aviso.prompt();
-            const { outcome } = await aviso.userChoice;
-            if (outcome === 'accepted') btn.classList.add('d-none');
-            aviso = null;
-        } else if (esIOS) {
-            ui.showFeedback('En Safari toca Compartir (□↑) y luego "Agregar a inicio"', 'info', 6000);
-        }
-    });
 
     // Atajo de la app instalada: abrir directamente el Asistente IA
     if (new URLSearchParams(location.search).get('asistente') === '1') {
